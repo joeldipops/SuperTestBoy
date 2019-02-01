@@ -20,7 +20,7 @@ padHL: macro
     push DE
     push BC
         xor A
-        ld16RR D,E, H,L
+        ld16 D,E, H,L
         ld BC, \1
         rst memset
     pop BC
@@ -149,7 +149,7 @@ PALpq:
     push BC
 
     ld HL, SP + 6 ; return address & two pushes 
-    ld16RR B,C, H,L
+    ld16 B,C, H,L
 
     ld HL, sgbTransferPacket
     ldHLi [HL], %00000001 ; Command code $00, 1 packet
@@ -162,7 +162,7 @@ PALpq:
     ENDR
 
     ; Pad out 1 byte at the end.
-    ld16RR D,E, H,L
+    ld16 D,E, H,L
 
     ld BC, 1
     xor A
@@ -235,7 +235,7 @@ MLT_REQ:
  
 .continue
     ; Set the rest of the packet to 0
-    ld16RR D,E, H,L
+    ld16 D,E, H,L
     ld BC, 14
     xor A
     rst memset

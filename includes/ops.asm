@@ -492,14 +492,17 @@ decAny: macro
 endm
 
 ;;;
-; Loads one 16 bit register into another
+; Loads a 16 bit register
 ;
-; ld16RR r16high,r16low, r16high,r16low
+; ld16 r16high,r16low, r16high,r16low
 ; Cycles: 2
 ; Bytes: 2
 ; Flags: None
 ;
-; @example - ld16RR H,L, B,C
+; ld16 r16high,r16low, n8,n8
+; 
+;
+; @example - ld16 H,L, B,C
 ; @notes - rgbasm has the conditional assembly directive IF - I thought I would be able to be like 
 ; IF (\2 == BC) 
 ;    \3 = B 
@@ -508,7 +511,7 @@ endm
 ; so that this could be called as ld16 HL, BC.
 ; But no, it seems IFs can only be used with integer constants, so I'm stuck with this syntax until I feel like forking rednex 
 ;;;
-ld16RR: macro
+ld16: macro
     ld \1, \3
     ld \2, \4
 endm

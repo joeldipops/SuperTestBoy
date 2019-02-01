@@ -32,14 +32,14 @@ printString:
     push AF
     push BC
     push HL
-    ld16RR B,C, H,L
+    ld16 B,C, H,L
 .loop
         ldi A, [HL]
         or A
     jr NZ, .loop
     sub16 H,L, B,C
     ; 16 bit subtraction.
-    ld16RR B,C, H,L
+    ld16 B,C, H,L
     ; Don't include the null
     dec BC
     pop HL
@@ -77,7 +77,7 @@ coordsToAddress:
     add HL, DE
 
     ; Destination address now in DE
-    ld16RR D,E, H,L
+    ld16 D,E, H,L
     pop HL
     ret
 

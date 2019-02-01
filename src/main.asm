@@ -1,8 +1,11 @@
 INCLUDE "../includes/addresses.asm"
 INCLUDE "../includes/constants.asm"
 INCLUDE "../includes/ops.asm"
+INCLUDE "../includes/utils.asm"
 INCLUDE "softwareConstants.asm"
 INCLUDE "utilMacros.asm"
+
+    setOAMStage $C000
 
 SECTION "errorHandler", ROM0[$0000]
 ;;;
@@ -133,7 +136,7 @@ main:
     ldh [BackgroundScrollY], A    
 
     ; Clear OAM
-    ld DE, OamStage
+    ld DE, OAMStage
     ld BC, OAM_SIZE
     call memset
 
@@ -254,35 +257,65 @@ loadInput:
 ; @param B The joypad state
 ;;;
 runLogic:
-    push BC
-
+    push HL
+    push DE
     ; Jump table
-    cpAny [state], INIT_STATE
-        call Z, initStep
-    cpAny [state], MAIN_MENU_STATE
-        call Z, mainMenuStep
-    cpAny [state], JOYPAD_TEST_STATE
-        call Z, joypadTestStep
-    cpAny [state], SGB_TEST_STATE
-        call Z, sgbTestStep
-    cpAny [state], MLT_REQ_STATE
-        call Z, mltReqStep
-    cpAny [state], PALPQ_STATE
-        call Z, palpqStep
-    cpAny [state], AUDIO_TEST_STATE
-        call Z, audioTestStep
-    cpAny [state], MASK_EN_STATE
-        call Z, maskEnStep
-    cpAny [state], MASKED_EN_STATE
-        call Z, maskedEnStep
+    ld A, [state]
 
     ; If set to a state higher than what's defined, it's an error
-    ldAny C, [state] 
-    cpAny MAX_STATE, C
-        jr NC, .return
+    cp MAX_STATE
+        jr C, .else
         throw
+
+.else
+    ; Multiply by eight so we can call & ret.
+    sla A
+    sla A
+    sla A
+    ld HL, .tableStart
+    ld16 D,E, 0,A
+    add HL, DE
+
+    jp HL
+.tableStart
+        call initStep
+        jr .return
+        pad 3, 1
+
+        call mainMenuStep
+        jr .return
+        pad 3, 1       
+
+        call joypadTestStep    
+        jr .return
+        pad 3, 1
+
+        call sgbTestStep
+        jr .return
+        pad 3, 1
+
+        call audioTestStep
+        jr .return
+        pad 3, 1        
+
+        call mltReqStep
+        jr .return
+        pad 3, 1        
+
+        call palpqStep
+        jr .return
+        pad 3, 1        
+
+        call maskEnStep
+        jr .return
+        pad 3, 1        
+
+        call maskedEnStep
+        jr .return
+
 .return
-    pop BC
+    pop DE
+    pop HL
     ret
 
 ;;;

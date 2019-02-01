@@ -1,5 +1,5 @@
-    IF (!DEF(UTILS_INCLUDED))
-UTILS_INCLUDED SET 1
+    IF (!DEF(MACROS_INCLUDED))
+MACROS_INCLUDED SET 1
 
 ;;; 
 ; Places the cursor according to the value at [HL]

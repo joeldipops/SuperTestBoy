@@ -60,7 +60,7 @@ initJoypadTest:
     updateSprite \
         RIGHT_SPRITE, \
         MARGIN_LEFT * 8, MENU_MARGIN_TOP, \
-        "D", HAS_PRIORITY | USE_PALETTE_1, 0                                        
+        "R", HAS_PRIORITY | USE_PALETTE_1, 0                                        
 
     ; Message at the bottom of the screen.
     ld HL, JoypadTestInstructions

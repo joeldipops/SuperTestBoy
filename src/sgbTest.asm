@@ -27,7 +27,7 @@ initSgbTest:
     moveCursor MENU_MARGIN_TOP + SPRITE_WIDTH
 
     ldAny [PcX], MENU_MARGIN_LEFT
-    ldAny [PcImage], LIGHTEST
+    ldAny [PcImage], CURSOR
     ldAny [PcSpriteFlags], HAS_PRIORITY | USE_PALETTE_0
 
     ; Title

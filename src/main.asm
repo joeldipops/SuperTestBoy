@@ -81,7 +81,7 @@ SECTION "JoypadPressed", ROM0[$0060]
 
 SECTION "main", ROM0[$0100]
     nop
-    jp main
+    jr main
     
     ; HEADER START
     ; not adding the logo here #illegal ;)
@@ -94,8 +94,8 @@ SECTION "main", ROM0[$0100]
     dw UNLICENSED ; Licensee
     db SGB_SUPPORTED ; SuperGameBoy support
     db ROM_ONLY ; Cartridge structure type
-    db ROM_32KB ; ROM size
-    db RAM_8KB ; RAM size
+    db ROM_32kB ; ROM size
+    db NO_RAM ; RAM size
     db FOREIGN_DESTINATION ; Destination code
     db USE_NEW_LICENSEE_CODE ; old licensee code
     db 0 ; Mask ROM version - rgbfix sets this

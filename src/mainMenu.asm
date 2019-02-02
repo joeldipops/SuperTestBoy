@@ -57,7 +57,7 @@ initMainMenu:
     ; Set up cursor
     ldAny [inputThrottleAmount], INPUT_THROTTLE
     ldAny [PcX], MENU_MARGIN_LEFT
-    ldAny [PcImage], LIGHTEST
+    ldAny [PcImage], CURSOR
     ldAny [PcSpriteFlags], HAS_PRIORITY | USE_PALETTE_0
 
     ld16RA H,L, cursorPosition

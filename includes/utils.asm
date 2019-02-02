@@ -26,7 +26,7 @@ endm
 ; Sets the sprite to a new Y location.
 ; @param \1 Sprite number
 ; @param \2 Y co-ordinate.
-; @param \3 1 if \2 is a register, 0 if it's not.
+; @param \3 1 if \2 is the accumulator, 0 if it's not.
 ;;;
 setSpriteY: macro
     IF \3 == 1
@@ -59,12 +59,6 @@ updateSprite: macro
         ldHLi [HL], \5
     ENDC
 endm
-
-    ;setOAMStage $C000
-
-    ;SECTION "Home", ROM0[$2800]
-    ;updateSprite 3, 32, 32, 0, %10100101, 0
-    ;updateSprite 2, 32, 32, 1, %10100101, 0
 
 ;;;
 ; Pad out a number of bytes.

@@ -1,30 +1,11 @@
-INCLUDE "../includes/addresses.asm"
-INCLUDE "../includes/constants.asm"
-INCLUDE "../includes/ops.asm"
-INCLUDE "../includes/utils.asm"
-INCLUDE "softwareConstants.asm"
-INCLUDE "utilMacros.asm"
+INCLUDE "includes/addresses.asm"
+INCLUDE "includes/constants.asm"
+INCLUDE "includes/ops.asm"
+INCLUDE "includes/utils.asm"
+INCLUDE "src/softwareConstants.asm"
+INCLUDE "src/utilMacros.asm"
 
     setOAMStage $C000
-
-SECTION "errorHandler", ROM0[$0000]
-;;;
-; Alias for 'rst handleError'
-;;;
-throw: macro
-    rst handleError
-endm
-
-;;;
-; Do something with the call stack and then hit the reset button.
-;;;
-handleError EQU $0000
-rst_handleError:
-    ; Do something with the stack
-    pop HL
-    ; Then restart from the beginning
-    jp main
-
 
 ;;;
 ; Set a block of bytes to a single value.
@@ -64,6 +45,25 @@ rst_memcpy:
     jr NZ, .loop
     ret
 
+SECTION "errorHandler", ROM0[$0038]
+;;;
+; Alias for 'rst handleError'
+;;;
+throw: macro
+    rst handleError
+endm
+
+;;;
+; Do something with the call stack and then hit the reset button.
+;;;
+handleError EQU $0038
+rst_handleError:
+    ; Do something with the stack
+    pop HL
+    ; Then restart from the beginning
+    jp main
+
+
 SECTION "Vblank", ROM0[$0040]
     jp onVBlank
 
@@ -89,7 +89,7 @@ SECTION "main", ROM0[$0100]
     db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
     db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
     db $00
-    db "SUPERTESTBOY",0,0 ; name
+    db "SUPERTESTBOY",0,0,0 ; name
     db NO_COLOUR_SUPPORT ; Colour type 
     dw UNLICENSED ; Licensee
     db SGB_SUPPORTED ; SuperGameBoy support
@@ -122,7 +122,6 @@ main:
     ld DE, $c000
     ld BC, $1fff
     rst memset
-    ;call memset
 
     ; Use the default palette everywhere to start with
     ld A, BG_PALETTE
@@ -138,13 +137,13 @@ main:
     ; Clear OAM
     ld DE, OAMStage
     ld BC, OAM_SIZE
-    call memset
+    rst memset
 
     ; Copy the ROM tile data to VRAM
     ld HL, Graphics
     ld DE, TileData
     ld BC, GraphicsEnd - Graphics
-    call memcpy
+    rst memcpy
 
     ; Set the tile map to all the same colour.
     call resetBackground
@@ -154,7 +153,6 @@ main:
     ld DE, runDma    ; Destination in HRAM
     ld BC, (runDmaRomEnd - runDmaRom)
     rst memcpy
-    ;rst $10 ; memcpy
 
     ; Turn the screen on and set it up.
     ldhAny [LcdControl], \
@@ -192,16 +190,16 @@ main:
         call loadInput
         call runLogic
         call runDma
-   jr .loop
+    jr .loop
 
 audioTestStep:
     throw ; Not yet implemented
 
 ; Include routines
-INCLUDE "lcd.asm"
-INCLUDE "mainMenu.asm"
-INCLUDE "joypadTest.asm"
-INCLUDE "sgbTest.asm"
+INCLUDE "src/lcd.asm"
+INCLUDE "src/mainMenu.asm"
+INCLUDE "src/joypadTest.asm"
+INCLUDE "src/sgbTest.asm"
 
 ;;;
 ; Loads the pressed buttons in to B
@@ -273,7 +271,8 @@ runLogic:
     sla A
     sla A
     ld HL, .tableStart
-    ld16 D,E, 0,A
+    ld D, 0
+    ld E, A
     add HL, DE
 
     jp HL
@@ -352,11 +351,11 @@ runDmaRom:
 runDmaRomEnd:
 
 SECTION "Strings ROM", ROM0[$2800]
-INCLUDE "strings.asm"
+INCLUDE "includes/strings.asm"
 
 SECTION "Graphics ROM", ROM0[$3000]
 Graphics:
-INCLUDE "../includes/tiles.inc"
+INCLUDE "includes/tiles.inc"
 GraphicsEnd:
 
 SECTION "Main Ram", WRAM0[$C000]

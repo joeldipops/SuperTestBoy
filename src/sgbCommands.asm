@@ -1,9 +1,9 @@
     IF !DEF(SGB_COMMANDS_INCLUDED)
 SGB_COMMANDS_INCLUDED SET 1
 
-INCLUDE "../includes/addresses.asm"
-INCLUDE "../includes/constants.asm"
-INCLUDE "../includes/ops.asm"
+INCLUDE "includes/addresses.asm"
+INCLUDE "includes/constants.asm"
+INCLUDE "includes/ops.asm"
 
 SGB_PACKET_SIZE EQU 16
 
@@ -20,7 +20,7 @@ padHL: macro
     push DE
     push BC
         xor A
-        ld16 D,E, H,L
+        ld16 DE, HL
         ld BC, \1
         rst memset
     pop BC
@@ -149,10 +149,10 @@ PALpq:
     push BC
 
     ld HL, SP + 6 ; return address & two pushes 
-    ld16 B,C, H,L
+    ld16 BC, HL
 
     ld HL, sgbTransferPacket
-    ldHLi [HL], %00000001 ; Command code $00, 1 packet
+    ldiAny [HL], %00000001 ; Command code $00, 1 packet
 
     ; TODO - just use memcpy here.
     REPT 14
@@ -162,7 +162,7 @@ PALpq:
     ENDR
 
     ; Pad out 1 byte at the end.
-    ld16 D,E, H,L
+    ld16 DE, HL
 
     ld BC, 1
     xor A
@@ -213,29 +213,29 @@ ATTR_LIN:
 ;;;
 MLT_REQ:
     ld HL, sgbTransferPacket
-    ldHLi [HL], %10001001
+    ldiAny [HL], %10001001
 
     ld A, B
     cp 1
     jr NZ, .not1
-        ldHLi [HL], %00000000
+        ldiAny [HL], %00000000
         jr .continue
 .not1    
     cp 2
     jr NZ, .not2
-        ldHLi [HL], %00000001
+        ldiAny [HL], %00000001
         jr .continue
 .not2
     cp 4
     jr NZ, .not4
-        ldHLi [HL], %00000011
+        ldiAny [HL], %00000011
         jr .continue
 .not4
     throw
  
 .continue
     ; Set the rest of the packet to 0
-    ld16 D,E, H,L
+    ld16 DE, HL
     ld BC, 14
     xor A
     rst memset
@@ -251,7 +251,7 @@ MLT_REQ:
 ;;;
 PCT_TRN:
     ld HL, sgbTransferPacket
-    ldHLi [HL], %10100001
+    ldiAny [HL], %10100001
     padHL 15
 
     call transferSgbPackets
@@ -265,8 +265,8 @@ PCT_TRN:
 ; @param C Mask mode - NONE/FROZEN/BLACK/COLOURED  
 MASK_EN:
     ld HL, sgbTransferPacket
-    ldHLi [HL], %10111001
-    ldHLi [HL], C
+    ldiAny [HL], %10111001
+    ldiAny [HL], C
     padHL 14
 
     call transferSgbPackets    

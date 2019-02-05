@@ -1,7 +1,7 @@
     IF !DEF(SGB_TEST_INCLUDED)
 SGB_TEST_INCLUDED SET 1
 
-INCLUDE "sgbCommands.asm"
+INCLUDE "src/sgbCommands.asm"
 
 SGB_ITEMS_COUNT EQU 6
 

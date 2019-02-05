@@ -1,8 +1,8 @@
     IF !DEF(UTILS_INCLUDED)
 UTILS_INCLUDED SET 1
 
-INCLUDE "../includes/ops.asm"
-INCLUDE "../includes/constants.asm"
+INCLUDE "includes/ops.asm"
+INCLUDE "includes/constants.asm"
 
 ;;;
 ; For sprite updates to work, we need to know where in memory they sit.
@@ -53,17 +53,17 @@ updateSprite: macro
         ldAny [OAMStage + (\1 * SPRITE_SIZE) + 1], \5        
     ELSE
         ld HL, OAMStage + (\1 * SPRITE_SIZE)
-        ldHLi [HL], \3
-        ldHLi [HL], \2
-        ldHLi [HL], \4
-        ldHLi [HL], \5
+        ldiAny [HL], \3
+        ldiAny [HL], \2
+        ldiAny [HL], \4
+        ldiAny [HL], \5
     ENDC
 endm
 
 ;;;
 ; Pad out a number of bytes.
 ; @param \1 number of bytes required.
-; @param \2 0 to pad with nop, 1 to pad with rst $00
+; @param \2 0 to pad with $00 (nop), 1 to pad with $ff (rst $38)
 ;;;
 pad: macro
     IF \2 == 0
@@ -72,7 +72,7 @@ pad: macro
         ENDR
     ELIF \2 == 1
         REPT \1
-            rst $00
+            rst $38
         ENDR
     ENDC
 endm    

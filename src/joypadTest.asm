@@ -21,7 +21,6 @@ initJoypadTest:
 
     ldhAny [SpritePalette1], %01001110    
 
-    ; The first parameter to ldHLi is ignored, but we can use it to keep track of where we're up to ldi wise.
     updateSprite \
         A_SPRITE, \
         MARGIN_LEFT, MENU_MARGIN_TOP, \

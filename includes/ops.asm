@@ -168,21 +168,37 @@ endm
 ; Cycles: 6
 ; Bytes: 4
 ; Flags: None
-;;;
-ldiAny: macro
-    ldi A, [HL]
-    ld \1, A
-endm
-
-;;;
-; ldHLi [HL], n8
+;
+; ldiAny [HL], n8
+; Cycles: 6
+; Bytes: 4
+; Flags: None
+;
+; ldiAny [HL], r8
+; Cycles: 3
+; Bytes: 2
+; Flags: None
+;
+; ldiAny [HL], [r16]
+; Cycles: 6
+; Bytes: 4
+; Flags: None
+;
+; ldiAny [HL], [n16]
 ; Cycles: 6
 ; Bytes: 4
 ; Flags: None
 ;;;
-ldHLi: macro
-    ld A, \2
-    ldi [HL], A
+ldiAny: macro
+    IF "\1" == "[HL]"
+        ld A, \2
+        ldi [HL], A
+    ELIF "\2" == "[HL]"
+        ldi A, [HL]
+        ld \1, A
+    ELSE
+        FAIL("ldi requires [HL]")
+    ENDC
 endm
 
 ;;;
@@ -494,26 +510,14 @@ endm
 ;;;
 ; Loads a 16 bit register
 ;
-; ld16 r16high,r16low, r16high,r16low
+; ld16 r16, r16
 ; Cycles: 2
 ; Bytes: 2
 ; Flags: None
-;
-; ld16 r16high,r16low, n8,n8
-; 
-;
-; @example - ld16 H,L, B,C
-; @notes - rgbasm has the conditional assembly directive IF - I thought I would be able to be like 
-; IF (\2 == BC) 
-;    \3 = B 
-;    \4 = C 
-; ENDC
-; so that this could be called as ld16 HL, BC.
-; But no, it seems IFs can only be used with integer constants, so I'm stuck with this syntax until I feel like forking rednex 
 ;;;
 ld16: macro
-    ld \1, \3
-    ld \2, \4
+    ld LOW(\1), LOW(\2)
+    ld HIGH(\1), HIGH(\2)
 endm
 
 ;;;
@@ -528,7 +532,7 @@ ld16RA: macro
 endm
 
 ;;;
-; Loads a 16bit regisuter in to memory
+; Loads a 16bit register in to memory
 ;;;
 ld16AR: macro
     ld A, \2
@@ -538,44 +542,39 @@ ld16AR: macro
 endm
 
 ;;;
-; Subtracts one 16 bit register from another with result in \1,\2.
+; Subtracts one 16 bit register from another with result in \1
 ; 
-; sub16 r16high,r16low, r16high,r16low
+; sub16 r16, r16
 ; Cycles: 6
 ; Bytes: 6
 ; Flags: Z=? N=1 H=? C=?
-;
-; @example - sub16 H,L, B,C
-; @notes - rgbasm has the conditional assembly directive IF - I thought I would be able to be like 
-; IF (\2 == BC) 
-;    \3 = B 
-;    \4 = C 
-; ENDC
-; so that this could be called as sub16 HL, BC.
-; But no, it seems IFs can only be used with integer constants, so I'm stuck with this syntax until I feel like forking rednex.
 ;;;
 sub16: macro
-    ld A, \2
-    sub \4
-    ld \2, A
-    ld A, \1
-    sbc \3
-    ld \1, A 
+    ld A, LOW(\1)
+    sub LOW(\2)
+    ld LOW(\1), A
+
+    ld A, HIGH(\1)
+    sbc HIGH(\2)
+    ld HIGH(\1), A
 endm
-
-
 
 ;;;
 ; Adds two 16bit registers together. Result in the first.
-; add16 r16high,r16low, r16high,r16low
+;
+; add16 r16, r16
+; Cycles: 6
+; Bytes: 6
+; Flags: Z=? N=0 H=? C=?
 ;;;
 add16: macro
-    ld A, \2
-    add \4
-    ld \2, A
-    ld A, \1
-    adc \3
-    ld \1, A
+    ld A, LOW(\1)
+    add LOW(\2)
+    ld LOW(\1), A 
+
+    ld A, HIGH(\1)
+    adc HIGH(\2)
+    ld HIGH(\1), A
 endm
-    
+
     ENDC

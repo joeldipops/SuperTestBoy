@@ -113,7 +113,7 @@ main:
 
     ; turn off outputs
     call turnOffScreen
-    resH AUDIO_ON_BIT, [AudioState]
+    resH AUDIO_ON_BIT, [AudioChannelSwitch]
 
     ld SP, stackFloor
 

@@ -23,7 +23,7 @@ initSgbTest:
     ; Set up cursor
     ldAny [inputThrottleAmount], INPUT_THROTTLE
 
-    ld16RA H,L, cursorPosition
+    ld16 HL, cursorPosition
     moveCursor MENU_MARGIN_TOP + SPRITE_WIDTH
 
     ldAny [PcX], MENU_MARGIN_LEFT
@@ -158,7 +158,7 @@ mltReqStep:
         jr .return
 
 .notB
-    ld16RA H,L, cursorPosition
+    ld16 HL, cursorPosition
 
     andAny B, LEFT | RIGHT | A_BTN | START
         jr Z, .return
@@ -289,7 +289,7 @@ Q_COLOUR_3 SET 13
 CURRENT_COLOUR SET 15
 COLOUR_STRING SET 17
 
-
+; array of where each colour will appear on screen.
 colourLocations:
     db $02,$0B
     db $02,$0C
@@ -365,7 +365,7 @@ renderPalPqColours:
 
         ; Green crosses two bytes
         push DE
-        ld16RA D,E, HP+ CURRENT_COLOUR
+        ld16 DE, HP+ CURRENT_COLOUR
         REPT 3
             sla D
             rlc E
@@ -482,9 +482,23 @@ palpqStep:
         jr .return
 .notB
     andAny B, A_BTN | START
+    jr Z, .notA
         ;onPalpqAPressed
+.notA
+    ld16 HL, cursorPosition
+    andAny B, LEFT
+    jr Z, .notLeft
+        ; Don't go less than 0
+        cpAny 0, [HL]
+            jr Z, .notLeft
+        dec [HL]
+        jr .moveCursor    
+.notLeft
+    andAny B, RIGHT
+    jr Z, .notRight
 
-
+.moveCursor
+.notRight
 .return    
     ret
 
@@ -544,7 +558,7 @@ maskEnStep:
         jr .return
 
 .notB
-    ld16RA H,L, cursorPosition
+    ld16 HL, cursorPosition
 
     andAny B, LEFT | RIGHT | A_BTN | START
         jr Z, .return
@@ -645,7 +659,7 @@ maskedEnStep:
 ; Goes to next step after selecting a command to send.
 ;;;
 sgbItemSelected:
-    ld16RA H,L, cursorPosition
+    ld16 HL, cursorPosition
     ld A, [HL]
 
     cp INIT_ITEM
@@ -714,7 +728,7 @@ sgbTestStep:
     andAny B, START | A_BTN | DOWN | UP
         jr Z, .return
 
-    ld16RA H,L, cursorPosition
+    ld16 HL, cursorPosition
     andAny B, UP
         jr Z, .notUp
 

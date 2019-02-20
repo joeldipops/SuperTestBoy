@@ -62,7 +62,7 @@ backToPrevMenu: macro
     call resetForeground
     
     ; Set position to 0 and dec depth.
-    ld16RA H,L, cursorPosition
+    ld16 HL, cursorPosition
     xor A
     ld [HL], A
     decAny [cursorPosition + 1]

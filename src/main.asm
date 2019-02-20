@@ -266,51 +266,36 @@ runLogic:
         throw
 
 .else
-    ; Multiply by eight so we can call & ret.
-    sla A
+    ; Multiply by four so we can fit the 3 byte jp
     sla A
     sla A
     ld HL, .tableStart
     ld D, 0
     ld E, A
     add HL, DE
-
+    ; push .return on to the stack so ret from initStep etc works as expected. 
+    ld DE, .return
+    push DE
     jp HL
 .tableStart
-        call initStep
-        jr .return
-        pad 3, 1
-
-        call mainMenuStep
-        jr .return
-        pad 3, 1       
-
-        call joypadTestStep    
-        jr .return
-        pad 3, 1
-
-        call sgbTestStep
-        jr .return
-        pad 3, 1
-
-        call audioTestStep
-        jr .return
-        pad 3, 1        
-
-        call mltReqStep
-        jr .return
-        pad 3, 1        
-
-        call palpqStep
-        jr .return
-        pad 3, 1        
-
-        call maskEnStep
-        jr .return
-        pad 3, 1        
-
-        call maskedEnStep
-        jr .return
+        jp initStep
+        db $00
+        jp mainMenuStep
+        db $00
+        jp joypadTestStep    
+        db $00
+        jp sgbTestStep
+        db $00
+        jp audioTestStep
+        db $00
+        jp mltReqStep
+        db $00
+        jp palpqStep
+        db $00
+        jp maskEnStep
+        db $00
+        jp maskedEnStep
+        db $00
 
 .return
     pop DE

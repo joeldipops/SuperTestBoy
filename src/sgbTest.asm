@@ -414,6 +414,11 @@ renderPalPqColours:
     pop DE
     ret
 
+PAL01X EQU 2
+PAL23X EQU 7
+PAL03X EQU 12
+PAL12X EQU 17
+
 ;;;
 ; Sets up the palpq submenu.
 ;;;
@@ -432,22 +437,22 @@ initPalpq:
     
     ; Palette Selection
     ld HL, Pal01
-    ld D, 2
+    ld D, PAL01X
     ld E, A  
     call printString
 
     ld HL, Pal23
-    ld D, 7
+    ld D, PAL23X
     ld E, A  
     call printString
 
     ld HL, Pal03
-    ld D, 12
+    ld D, PAL03X
     ld E, A  
     call printString
 
     ld HL, Pal12
-    ld D, 17
+    ld D, PAL12X
     ld E, A  
     call printString
 
@@ -463,6 +468,9 @@ initPalpq:
     ldAny [stateInitialised], 1
     ret   
 
+palpqColourStep:
+    throw
+
 ;;;
 ; Allows a PALpq command to be set up with selection of palettes and colours for each.
 ;;;
@@ -472,7 +480,7 @@ palpqStep:
 
     ; If no button pressed, do nothing.
     andAny B, A_BTN | START | B_BTN | UP | DOWN | LEFT | RIGHT 
-        jr Z, .return
+        jp Z, .return
 
     ; Back to previous menu if B pressed.
     andAny B, B_BTN
@@ -483,7 +491,10 @@ palpqStep:
 .notB
     andAny B, A_BTN | START
     jr Z, .notA
-        ;onPalpqAPressed
+        ldAny [HP + PQ], [HL]
+        ldAny [stateInitialised], 0
+        ldAny [state], PALPQ_COLOUR_STATE
+        jr .return
 .notA
     ld16 HL, cursorPosition
     andAny B, LEFT
@@ -496,8 +507,36 @@ palpqStep:
 .notLeft
     andAny B, RIGHT
     jr Z, .notRight
+        cpAny 4, [HL]
+            jr Z, .notRight
+        inc [HL]
+        jr .moveCursor
 
 .moveCursor
+    cpAny 0, [HL]
+    jr NZ, .notPal01
+        ldAny [PcX], (PAL01X) * SPRITE_WIDTH
+        jr .return
+    
+.notPal01
+    cpAny 1, [HL]
+    jr NZ, .notPal23
+        ldAny [PcX], (PAL23X) * SPRITE_WIDTH
+        jr .return
+
+.notPal23
+    cpAny 2, [HL]
+    jr NZ, .notPal03
+        ldAny [PcX], (PAL03X) * SPRITE_WIDTH
+        jr .return
+
+.notPal03
+    cpAny 3, [HL]
+    jr NZ, .notPal12
+        ldAny [PcX], (PAL12X) * SPRITE_WIDTH
+        jr .return
+
+.notPal12
 .notRight
 .return    
     ret

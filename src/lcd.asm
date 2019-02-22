@@ -59,7 +59,7 @@ coordsToAddress:
     push AF
 
     ; Calculate the destination address based on co-ordinates
-    mult E, SCREEN_BYTE_WIDTH, 1   ; y * width
+    mult E, SCREEN_BYTE_WIDTH   ; y * width
     ; ^ since we're multiplying by 32 here, there's probably value in using shifts to calculate this
     ld E, D
     ld D, 0

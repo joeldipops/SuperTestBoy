@@ -1,6 +1,8 @@
     IF !DEF(PSEUDO_OPS_INCLUDED)
 PSEUDO_OPS_INCLUDED SET 1
 
+R16 EQUS "\"BC DE HL\""
+
 ;;;
 ; Adds two values, Result in r8
 ; addAny r8, [r16]
@@ -51,39 +53,49 @@ endm
 ; Multiples two numbers, result in HL
 ;;;
 mult: macro
+HAS_SIDE_AFFECTS SET 0
 P1 EQUS "\1"
 P2 EQUS "\2"
     IF _NARG == 3
         SHIFT
 P3 EQUS "\2"
-        push P3
+        ; I should be able to use || here, but my second condition was never true, despite working as expected im the ELIF
+        IF STRLEN("{P3}") == 2 && STRIN(R16, "{P3}") == 0
+            FAIL "r16 must be either BC or DE"
+        ELIF "{P3}" == "HL"
+            FAIL "r16 must be either BC or DE"
+        ENDC
+    ELSE
+P3 EQUS "BC"
+HAS_SIDE_AFFECTS SET 1        
+        push BC
     ENDC
 
     ld HL, 0
-    ld B, P1
-    ld C, P2
+    ld HIGH(P3), P1
+    ld LOW(P3), P2
     ; If either of the operands are 0, return 0
     xor A
-    add B
+    add HIGH(P3)
         jr Z, .end\@	
-    add C
+    add LOW(P3)
         jr Z, .end\@
 
     xor A
 .loop\@
         ; TODO can we use `add HL, r16`??
-        add A, C
+        add A, LOW(P3)
         ld L, A
         adcAny H, 0
-        dec B
+        dec HIGH(P3)
         ld A, L
     jr NZ, .loop\@
 .end\@
 
     ; Ensures flags set consistently.
     xor A
-    IF _NARG = 3
-        pop P3
+    IF HAS_SIDE_AFFECTS == 1
+        pop BC
     ENDC
     PURGE P1
     PURGE P2
@@ -216,7 +228,7 @@ ldiAny: macro
         ldi A, [HL]
         ld \1, A
     ELSE
-        FAIL("ldi requires [HL]")
+        FAIL "ldi requires [HL]"
     ENDC
 endm
 
@@ -525,8 +537,6 @@ decAny: macro
     dec A
     ld \1, A
 endm
-
-R16 EQUS "\"BC DE HL\""
 
 ;;;
 ; Loads a 16 bit register

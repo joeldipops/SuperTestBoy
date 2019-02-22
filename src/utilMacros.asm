@@ -8,7 +8,9 @@ MACROS_INCLUDED SET 1
 ;;;
 moveCursor: macro
     ld A, [HL]
-    mult A, SPRITE_WIDTH, 0
+    push BC
+    mult A, SPRITE_WIDTH, BC
+    pop BC
     ld A, L
     add \1
     ld [PcY], A

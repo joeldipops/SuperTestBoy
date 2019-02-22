@@ -90,31 +90,6 @@ divide:
     pop BC
     ret
 
-
-;;;
-; Multiplies two numbers
-; @param A the first number
-; @param B the second number
-; @return A the multiplied result.
-;;;
-multiply:
-    push BC
-    push DE
-    ld C, A
-.do                         ; do
-        add A, C                ;     result += A
-        dec B                   ;     b--
-        ld D, A
-        ld A, B
-        cp 0                    ; until (b == 0)
-        ; really hope these are guaranteed not to mess with Z
-        ld B, A
-        ld A, D   
-        jr NZ, .do              
-    pop DE
-    pop BC
-    ret
-
 ;;;
 ; terminates the program if there's an error
 ; @param D should equal E

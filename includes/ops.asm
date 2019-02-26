@@ -2,6 +2,7 @@
 PSEUDO_OPS_INCLUDED SET 1
 
 R16 EQUS "\"BC DE HL\""
+R8 EQUS "\"A B C D E H L\""
 
 ;;;
 ; Adds two values, Result in r8
@@ -25,7 +26,7 @@ endm
 
 ;;;
 ; Inserts a null terminated string into ROM
-; dbs string
+; dbs string, ...
 ; Bytes: Length of String + 1
 ; Cycles: N/A
 ; Flags: N/A
@@ -49,57 +50,70 @@ pushAny: macro
 endm
 
 ;;;
-; mult r8, r8
-; Multiples two numbers, result in HL
+; Multiples A with another value, result in HL
+; mult r8, ?r16
+;
+; mult n8, ?r16
+;
+; mult [r16], ?r16
+;
+; mult [n16], ?r16
 ;;;
 mult: macro
-HAS_SIDE_AFFECTS SET 0
-P1 EQUS "\1"
-P2 EQUS "\2"
-    IF _NARG == 3
+HAS_SIDE_AFFECTS\@ SET 0
+VALUE\@ EQUS "\1"
+    ; If a second param is supplied, use that as our temp register and don't both pushpopping
+    IF _NARG == 2
         SHIFT
-P3 EQUS "\2"
+TEMP\@ EQUS "\1"
         ; I should be able to use || here, but my second condition was never true, despite working as expected im the ELIF
-        IF STRLEN("{P3}") == 2 && STRIN(R16, "{P3}") == 0
+        IF STRLEN("{TEMP\@}") == 2 && STRIN(R16, "{TEMP\@}") == 0
             FAIL "r16 must be either BC or DE"
-        ELIF "{P3}" == "HL"
+        ELIF "{TEMP\@}" == "HL"
             FAIL "r16 must be either BC or DE"
         ENDC
     ELSE
-P3 EQUS "BC"
-HAS_SIDE_AFFECTS SET 1        
+TEMP\@ EQUS "BC"
+HAS_SIDE_AFFECTS\@ SET 1        
         push BC
     ENDC
 
-    ld HL, 0
-    ld HIGH(P3), P1
-    ld LOW(P3), P2
-    ; If either of the operands are 0, return 0
-    xor A
-    add HIGH(P3)
-        jr Z, .end\@	
-    add LOW(P3)
+    ld HIGH(TEMP\@), 0
+    ld LOW(TEMP\@), A
+    ld H, HIGH(TEMP\@)
+    ld L, HIGH(TEMP\@)
+
+    ; If either operand is 0, finish now.
+    or A
         jr Z, .end\@
 
-    xor A
-.loop\@
-        ; TODO can we use `add HL, r16`??
-        add A, LOW(P3)
-        ld L, A
-        adcAny H, 0
-        dec HIGH(P3)
-        ld A, L
-    jr NZ, .loop\@
-.end\@
+    ld A, VALUE\@
+    or A
+        jr Z, .end\@
 
-    ; Ensures flags set consistently.
-    xor A
-    IF HAS_SIDE_AFFECTS == 1
+.loop\@
+        add HL, TEMP\@
+        dec A
+        jr NZ, .loop\@
+
+.end\@
+    IF HAS_SIDE_AFFECTS\@ == 1
         pop BC
     ENDC
-    PURGE P1
-    PURGE P2
-    PURGE P3
+endm
+
+;;;
+; Multiples two values, result in HL
+; mult v8, v8, ?r16
+;;;
+multAny: macro
+    ld A, \1
+    IF _NARG == 3
+        SHIFT
+        mult \1, \2
+    ELSE
+        mult \2
+    ENDC
 endm
 
 ;;;
@@ -152,7 +166,7 @@ endm
 ;;;
 ldAny: macro
     ld A, \2
-    ld \1, A
+    ld \1 , A
 endm
 
 ;;;
@@ -545,24 +559,46 @@ endm
 ; Cycles: 2
 ; Bytes: 2
 ; Flags: None
+;
+; ld16 r16, [n16]
+; 
 ;;;
 ld16: macro
-    IF (STRLEN("\1") == 2 && STRIN(R16, "\1") != 0) && (STRLEN("\2") == 2 && STRIN(R16, "\2") != 0)
-        ; If both operands are registers
-        ld LOW(\1), LOW(\2)
-        ld HIGH(\1), HIGH(\2)
-    ELIF STRLEN("\1") == 2 && STRIN(R16, "\1") != 0
-        ; If first operand is a register
-        ldAny HIGH(\1), [\2]
-        ldAny LOW(\1), [\2 + 1]
-    ELIF STRLEN("\2") == 2 && STRIN(R16, "\2") != 0        
-        ; If second operand is a register
-        ldAny [\1], HIGH(\2)
-        ldAny [\1 + 1], LOW(\2)
+IS_P1_R16\@ SET (STRLEN("\1") == 2 && STRIN(R16, "\1") != 0)
+IS_P2_R16\@ SET (STRLEN("\2") == 2 && STRIN(R16, "\2") != 0)
+
+    ; Remove the square brackets around \2 so we can find the following address ie. [\2 + 1]
+    IF ((STRIN("\2", "[") == 1) && (STRIN("\2", "]") == STRLEN("\2")))
+P2\@ EQUS STRSUB("\2", 2, STRLEN("\2") - 2)
+    ELSE
+P2\@ EQUS "\2"
+    ENDC    
+
+    IF IS_P1_R16\@
+        IF IS_P2_R16\@
+            ; If both operands are registers
+            ld LOW(\1), LOW(\2)
+            ld HIGH(\1), HIGH(\2)
+        ELSE
+            ; If only first operand is a register
+            ldAny HIGH(\1), [P2\@]
+            ldAny LOW(\1), [P2\@ + 1]
+        ENDC
+    ELIF IS_P2_R16\@
+        ; Remove the square brackets around \1 so we can find the following address ie. [\1 + 1]
+        IF STRIN("\1", "[") == 1 && STRIN("\1", "]") == STRLEN("\1")
+P1\@ EQUS STRSUB("\1", 2, STRLEN("\1") - 2)
+        ELSE
+P1\@ EQUS "\1"
+        ENDC
+
+        ; If only second operand is a register
+        ldAny [P1\@], HIGH(\2)
+        ldAny [P1\@ + 1], LOW(\2)
     ELSE
         ; If both are addresses
-        ldAny [\1], [\2]
-        ldAny [\1 + 1], [\2 + 1]
+        ldAny [P1\@], [P2\@]
+        ldAny [P1\@ + 1], [P2\@ + 1]
     ENDC
 endm
 
@@ -646,7 +682,7 @@ endm
 ; Flags: None
 ;;;
 jpgte: macro
-  jp NC, \1
+    jp NC, \1
 endm
 
 ;;;
@@ -657,7 +693,7 @@ endm
 ; Flags: None
 ;;;
 jpeq: macro
-  jp Z, \1
+    jp Z, \1
 endm
 
 ;;;

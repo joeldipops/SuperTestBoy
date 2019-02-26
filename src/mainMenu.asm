@@ -16,7 +16,7 @@ mainMenuStep:
         call Z, initMainMenu
 
     ; if no relevant buttons pressed.
-    ld16 HL, cursorPosition
+    ld16 HL, [cursorPosition]
 
     andAny B, START | A_BTN | DOWN | UP
         jr Z, .return
@@ -60,7 +60,7 @@ initMainMenu:
     ldAny [PcImage], CURSOR
     ldAny [PcSpriteFlags], HAS_PRIORITY | USE_PALETTE_0
 
-    ld16 HL, cursorPosition
+    ld16 HL, [cursorPosition]
     moveCursor MENU_MARGIN_TOP
 
     ldAny [stateInitialised], 1
@@ -88,7 +88,7 @@ initMainMenu:
 mainMenuItemSelected:
     push HL
 
-    ld16 HL, cursorPosition
+    ld16 HL, [cursorPosition]
     cpAny 1, [HL]
         jr NZ, .notJoypad
         ldAny [state], JOYPAD_TEST_STATE

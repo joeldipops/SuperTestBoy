@@ -8,9 +8,7 @@ MACROS_INCLUDED SET 1
 ;;;
 moveCursor: macro
     ld A, [HL]
-    push BC
-    mult A, SPRITE_WIDTH, BC
-    pop BC
+    mult SPRITE_WIDTH
     ld A, L
     add \1
     ld [PcY], A
@@ -64,7 +62,7 @@ backToPrevMenu: macro
     call resetForeground
     
     ; Set position to 0 and dec depth.
-    ld16 HL, cursorPosition
+    ld16 HL, [cursorPosition]
     xor A
     ld [HL], A
     decAny [cursorPosition + 1]

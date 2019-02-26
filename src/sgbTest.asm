@@ -147,7 +147,7 @@ checkMltReqResult:
 ;;;
 mltReqStep:
     ; Init if not already
-    orAny [stateInitialised], A
+    if0 [stateInitialised]
         call Z, initMltReq
 
     ; Go back if B pressed.
@@ -275,19 +275,41 @@ executePalpq:
     ret
 
 ;;;
+; PALPQ Constants
+;;;
+
+; PALPQ Palette types
+PAL01X EQU 2
+PAL23X EQU 7
+PAL03X EQU 12
+PAL12X EQU 17
+
+paletteXPositions:    
+    db PAL01X * SPRITE_WIDTH
+    db PAL23X * SPRITE_WIDTH    
+    db PAL03X * SPRITE_WIDTH
+    db PAL12X * SPRITE_WIDTH
+
+;;;
 ; Heap offsets for palpq state.
 ;;;
-PQ SET 0
+
+; Selected palette
+PQ EQU 0
+
 ; Each colour is a word
-P_COLOUR_0 SET 1
-P_COLOUR_1 SET 3
-P_COLOUR_2 SET 5
-P_COLOUR_3 SET 7
-Q_COLOUR_1 SET 9
-Q_COLOUR_2 SET 11
-Q_COLOUR_3 SET 13
-CURRENT_COLOUR SET 15
-COLOUR_STRING SET 17
+
+P_COLOUR_0 EQU 1
+P_COLOUR_1 EQU 3
+P_COLOUR_2 EQU 5
+P_COLOUR_3 EQU 7
+Q_COLOUR_1 EQU 9
+Q_COLOUR_2 EQU 11
+Q_COLOUR_3 EQU 13
+CURRENT_RENDER_COLOUR EQU 15
+COLOUR_STRING EQU 17
+SELECTED_COLOUR EQU 18
+SELECTED_BYTE EQU 19
 
 ; array of where each colour will appear on screen.
 colourLocations:
@@ -299,6 +321,8 @@ colourLocations:
     db $0C,$0C
     db $0C,$0D
     db $0C,$0E
+
+
 
 ;;;
 ; Adds the primary colour value to the buffer.
@@ -353,11 +377,11 @@ renderPalPqColours:
 .loop
         ld DE, HP+ COLOUR_STRING ; Buffer being written to.
 
-        ldiAny [HP+ CURRENT_COLOUR], [HL]
-        ldiAny [HP+ CURRENT_COLOUR+1], [HL]
+        ldiAny [HP+ CURRENT_RENDER_COLOUR], [HL]
+        ldiAny [HP+ CURRENT_RENDER_COLOUR+1], [HL]
 
         ; Red is in the top byte.
-        ld A, [HP+ CURRENT_COLOUR]
+        ld A, [HP+ CURRENT_RENDER_COLOUR]
         srl A
         srl A
         and %00011111
@@ -365,7 +389,7 @@ renderPalPqColours:
 
         ; Green crosses two bytes
         push DE
-        ld16 DE, [HP+ CURRENT_COLOUR]
+        ld16 DE, [HP+ CURRENT_RENDER_COLOUR]
         REPT 3
             sla D
             rlc E
@@ -378,7 +402,7 @@ renderPalPqColours:
         call writeColour        
 
         ; Blue is simple.
-        ld A, [HP+ CURRENT_COLOUR+1]
+        ld A, [HP+ CURRENT_RENDER_COLOUR+1]
         and %00011111
         call writeColour
 
@@ -413,11 +437,6 @@ renderPalPqColours:
     pop BC
     pop DE
     ret
-
-PAL01X EQU 2
-PAL23X EQU 7
-PAL03X EQU 12
-PAL12X EQU 17
 
 ;;;
 ; Sets up the palpq submenu.
@@ -468,14 +487,43 @@ initPalpq:
     ldAny [stateInitialised], 1
     ret   
 
-palpqColourStep:
+initPalPqColour:
     throw
+
+;;;
+; Allows selection of a colour to set within a palette.
+;;;
+palpqColourStep:
+    if0 [stateInitialised]
+        call Z, initPalPqColour
+
+    andAny B, A_BTN | START | B_BTN | UP | DOWN | LEFT | RIGHT  
+        jp Z, .return
+
+    andAny B, B_BTN
+    jr Z, .notB
+        ldAny [state], PALPQ_STATE
+        backToPrevMenu
+        jr .return
+
+.notB
+    andAny B, A_BTN | START
+    jr Z, .notA
+        ldAny [HP+ SELECTED_COLOUR], 0
+        ldAny [stateInitialised], 0
+        ldAny [state], PALPQ_BYTE_STATE
+
+
+.notA
+    
+.return
+    ret
 
 ;;;
 ; Allows a PALpq command to be set up with selection of palettes and colours for each.
 ;;;
 palpqStep:
-    orAny [stateInitialised], A
+    if0 [stateInitialised]
         call Z, initPalpq
 
     ; If no button pressed, do nothing.
@@ -491,7 +539,7 @@ palpqStep:
 .notB
     andAny B, A_BTN | START
     jr Z, .notA
-        ldAny [HP + PQ], [HL]
+        ldAny [HP+ PQ], [cursorPosition]
         ldAny [stateInitialised], 0
         ldAny [state], PALPQ_COLOUR_STATE
         jr .return
@@ -507,36 +555,18 @@ palpqStep:
 .notLeft
     andAny B, RIGHT
     jr Z, .notRight
-        cpAny 4, [HL]
+        cpAny 3, [HL]
             jr Z, .notRight
         inc [HL]
         jr .moveCursor
 
 .moveCursor
-    cpAny 0, [HL]
-    jr NZ, .notPal01
-        ldAny [PcX], (PAL01X) * SPRITE_WIDTH
-        jr .return
+    ld B, 0
+    ld C, [HL]
+    ld HL, paletteXPositions
+    add HL, BC
+    ldAny [PcX], [HL]
     
-.notPal01
-    cpAny 1, [HL]
-    jr NZ, .notPal23
-        ldAny [PcX], (PAL23X) * SPRITE_WIDTH
-        jr .return
-
-.notPal23
-    cpAny 2, [HL]
-    jr NZ, .notPal03
-        ldAny [PcX], (PAL03X) * SPRITE_WIDTH
-        jr .return
-
-.notPal03
-    cpAny 3, [HL]
-    jr NZ, .notPal12
-        ldAny [PcX], (PAL12X) * SPRITE_WIDTH
-        jr .return
-
-.notPal12
 .notRight
 .return    
     ret
@@ -586,7 +616,7 @@ initMaskEn:
 ;;;
 maskEnStep:
     ; Init if not already
-    orAny [stateInitialised], A
+    if0 [stateInitialised]
         call Z, initMaskEn
 
     ; Go back if B pressed.
@@ -771,8 +801,8 @@ sgbTestStep:
     andAny B, UP
         jr Z, .notUp
 
-        orAny [HL], [HL]
-        jr Z, .notUp
+        if0 [HL]
+            jr Z, .notUp
             dec [HL]
 
 .notUp

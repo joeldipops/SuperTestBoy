@@ -61,6 +61,15 @@ updateSprite: macro
 endm
 
 ;;;
+; ors a register/value with itself to see if it's zero
+; @param \1 The value.
+;;; 
+if0: macro
+    ld A, \1
+    or A
+endm
+
+;;;
 ; Pad out a number of bytes.
 ; @param \1 number of bytes required.
 ; @param \2 0 to pad with $00 (nop), 1 to pad with $ff (rst $38)
@@ -75,6 +84,6 @@ pad: macro
             rst $38
         ENDR
     ENDC
-endm    
+endm   
 
     ENDC

@@ -296,7 +296,12 @@ endm
 ;;;
 orAny: macro
     ld A, \1
-    or \2
+    IF "\1" == "\2"
+        ; Idiot proofing phase 1
+        or A
+    ELSE
+        or \2
+    ENDC
 endm
 
 ;;;

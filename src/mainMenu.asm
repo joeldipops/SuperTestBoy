@@ -24,8 +24,8 @@ mainMenuStep:
         jr Z, .notUp
 
         ; If already at top of menu, bail
-        orAny [HL], [HL]
-        jr Z, .notUp
+        if0 [HL]
+            jr Z, .notUp
             dec [HL]
 
 .notUp

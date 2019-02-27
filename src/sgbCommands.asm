@@ -209,7 +209,7 @@ ATTR_LIN:
 ; $11 - MLT_REQ
 ;
 ; Request Multiplayer mode
-; @param B Number of players requested (1, 2 or 4)
+; @param C Number of players requested (1, 2 or 4)
 ;;;
 MLT_REQ:
     ld HL, sgbTransferPacket

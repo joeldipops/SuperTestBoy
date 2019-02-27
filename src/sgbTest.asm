@@ -3,15 +3,14 @@ SGB_TEST_INCLUDED SET 1
 
 INCLUDE "src/sgbCommands.asm"
 
-SGB_ITEMS_COUNT EQU 6
-
-INIT_ITEM EQU       0
-PALPQ_ITEM EQU      1
-ATTR_LIN_ITEM EQU   2
-MLT_REQ_ITEM EQU    3
-PCT_TRN_ITEM EQU    4
-MASK_EN_ITEM EQU    5
-
+RSRESET
+INIT_ITEM       RB 1
+PALPQ_ITEM      RB 1
+ATTR_LIN_ITEM   RB 1
+MLT_REQ_ITEM    RB 1
+PCT_TRN_ITEM    RB 1
+MASK_EN_ITEM    RB 1
+SGB_ITEMS_COUNT RB 0
    
 ;;;
 ; Sets up super game boy test page.
@@ -184,55 +183,27 @@ mltReqStep:
 
 .notRight
     ; When a or start is pressed
-    ; Depending on what's highlighted, set the corresponding value in B 
+    ; Depending on what's highlighted, set the corresponding value in C
     ; And then run the command.
     ld B, A
     and A_BTN | START
     jr Z, .notA
-        cpAny 0, [HL]
-        jr NZ, .not1Player
-            ld B, 1
-            jr .sendCommand
-
-.not1Player
-        cpAny 1, [HL]
-        jr NZ, .not2Player
-            ld B, 2
-            jr .sendCommand
-
-.not2Player
-        cpAny 2, [HL]
-        jr NZ, .not4Player
-            ld B, 4
-            jr .sendCommand
+        loadIndexAddress mltReqValues, [HL]
+        ld C, [HL]
+        jr .sendCommand
 
 .sendCommand
     call MLT_REQ
     call checkMltReqResult
     jr .return    
 
-.else
-
 .not4Player
         throw
 
 .notA
 .moveCursor
-    cpAny 0, [HL]
-    jr NZ, .notCursor0
-        ldAny [PcX], 2 * SPRITE_WIDTH
-        jr .return
-
-.notCursor0
-    cpAny 1, [HL]
-    jr NZ, .notCursor1
-        ldAny [PcX], 5 * SPRITE_WIDTH
-        jr .return
-
-.notCursor1
-    cpAny 2, [HL]
-    jr NZ, .notCursor2
-        ldAny [PcX], 8 * SPRITE_WIDTH
+    loadIndexAddress mltReqXPositions, [HL]
+    ldAny [PcX], [HL]
 
 .notCursor2
 .return
@@ -290,37 +261,51 @@ paletteXPositions:
     db PAL03X * SPRITE_WIDTH
     db PAL12X * SPRITE_WIDTH
 
+maskEnXPositions:
+    db 2 * SPRITE_WIDTH     ; Freeze screen
+    db 8 * SPRITE_WIDTH     ; Black screen
+    db 14 * SPRITE_WIDTH    ; Fill screen with colour 0
+
+mltReqValues:
+    db 1, 2, 4
+
+mltReqXPositions:
+    db 2 * SPRITE_WIDTH
+    db 5 * SPRITE_WIDTH
+    db 8 * SPRITE_WIDTH
+
 ;;;
 ; Heap offsets for palpq state.
 ;;;
 
 ; Selected palette
-PQ EQU 0
+
 
 ; Each colour is a word
-
-P_COLOUR_0 EQU 1
-P_COLOUR_1 EQU 3
-P_COLOUR_2 EQU 5
-P_COLOUR_3 EQU 7
-Q_COLOUR_1 EQU 9
-Q_COLOUR_2 EQU 11
-Q_COLOUR_3 EQU 13
-CURRENT_RENDER_COLOUR EQU 15
-COLOUR_STRING EQU 17
-SELECTED_COLOUR EQU 18
-SELECTED_BYTE EQU 19
+RSRESET
+PQ                      RB 1
+P_COLOUR_0              RW 1
+P_COLOUR_1              RW 1
+P_COLOUR_2              RW 1
+P_COLOUR_3              RW 1
+Q_COLOUR_1              RW 1
+Q_COLOUR_2              RW 1
+Q_COLOUR_3              RW 1
+CURRENT_RENDER_COLOUR   RW 1
+SELECTED_COLOUR         RB 1
+SELECTED_BYTE           RB 1
+COLOUR_STRING           RB 1
 
 ; array of where each colour will appear on screen.
 colourLocations:
-    db $02,$0B
-    db $02,$0C
-    db $02,$0D
-    db $02,$0E
+    db $02,$0b
+    db $02,$0c
+    db $02,$0d
+    db $02,$0e
 
-    db $0C,$0C
-    db $0C,$0D
-    db $0C,$0E
+    db $0c,$0C
+    db $0c,$0d
+    db $0c,$0e
 
 
 
@@ -509,13 +494,22 @@ palpqColourStep:
 .notB
     andAny B, A_BTN | START
     jr Z, .notA
-        ldAny [HP+ SELECTED_COLOUR], 0
+        ldAny [HP+ SELECTED_COLOUR], [cursorPosition]
         ldAny [stateInitialised], 0
         ldAny [state], PALPQ_BYTE_STATE
-
+        jr .return
 
 .notA
-    
+    ld16 HL, [cursorPosition]
+
+    andAny B, UP
+    jr Z, .notUp
+        if0 [HL]
+        jr Z, .return
+            dec [HL]
+            jr .moveCursor
+
+.notUp
 .return
     ret
 
@@ -539,9 +533,12 @@ palpqStep:
 .notB
     andAny B, A_BTN | START
     jr Z, .notA
-        ldAny [HP+ PQ], [cursorPosition]
+        ld16 HL, [cursorPosition]
+        ldAny [HP+ PQ], [HL]
         ldAny [stateInitialised], 0
         ldAny [state], PALPQ_COLOUR_STATE
+        ; Go to next menu level.
+        incAny [cursorPosition+1]        
         jr .return
 .notA
     ld16 HL, [cursorPosition]
@@ -561,10 +558,7 @@ palpqStep:
         jr .moveCursor
 
 .moveCursor
-    ld B, 0
-    ld C, [HL]
-    ld HL, paletteXPositions
-    add HL, BC
+    loadIndexAddress paletteXPositions, [HL]
     ldAny [PcX], [HL]
     
 .notRight
@@ -575,6 +569,8 @@ palpqSelected:
     ldAny [stateInitialised], 0
     ldAny [state], PALPQ_STATE
     ret
+
+
 
 ;;;
 ; Sets up the mask_en submenu.
@@ -688,21 +684,8 @@ maskEnStep:
 
 .notA
 .moveCursor
-    cpAny 0, [HL]
-    jr NZ, .notCursor0
-        ldAny [PcX], 2 * SPRITE_WIDTH
-        jr .return
-
-.notCursor0
-    cpAny 1, [HL]
-    jr NZ, .notCursor1
-        ldAny [PcX], 8 * SPRITE_WIDTH
-        jr .return
-
-.notCursor1
-    cpAny 2, [HL]
-    jr NZ, .notCursor2
-        ldAny [PcX], 14 * SPRITE_WIDTH
+    loadIndexAddress maskEnXPositions, [HL]
+    ldAny [PcX], [HL]
 
 .notCursor2
 .return

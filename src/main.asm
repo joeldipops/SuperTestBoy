@@ -192,6 +192,8 @@ main:
         call runDma
     jr .loop
 
+    defineSpriteOffsetArray    
+
 audioTestStep:
     throw ; Not yet implemented
 
@@ -368,6 +370,7 @@ stateInitialised: db
 ; Guess we can go 4 menus deep 
 cursorPositionBase: ds MAX_MENU_DEPTH
 cursorPosition: dw
+cursorAltPosition: db ; For cursering on two axes.
 inputThrottleCount: db
 inputThrottleAmount: db
 

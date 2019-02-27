@@ -1,6 +1,25 @@
     IF (!DEF(MACROS_INCLUDED))
 MACROS_INCLUDED SET 1
 
+;;;
+; Defines an array 'spriteOffsets' to save cycles 
+; when moving sprites to a certain row.
+;;;
+defineSpriteOffsetArray: macro
+    IF (!DEF(SPRITE_ARRAY_DEFINED))
+SPRITE_ARRAY_DEFINED SET 1
+
+spriteOffsets:
+I SET 0
+        REPT 25
+            db I * SPRITE_WIDTH
+I SET I + 1
+        ENDR
+    ENDC
+endm
+
+
+
 ;;; 
 ; Places the cursor according to the value at [HL]
 ; @param \1 Top margin
@@ -12,6 +31,22 @@ moveCursor: macro
     ld A, L
     add \1
     ld [PcY], A
+endm
+
+;;;
+; Puts HL at address of index \2 of array \1
+; @param \1 label of the array
+; @param \2 array index
+; @affects 
+; * B = 0
+; * C = \2
+; * HL = address of \1[\2]
+;;;
+loadIndexAddress: macro
+    ld B, 0
+    ld C, \2
+    ld HL, \1
+    add HL, BC    
 endm
 
 ;;;

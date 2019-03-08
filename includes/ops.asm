@@ -7,10 +7,19 @@ R8 EQUS "\"A B C D E H L\""
 ;;;
 ; Adds two values, Result in r8
 ; addAny r8, [r16]
+;
+; addAny r8, [n16]
+;
 ;;;;
 addAny: macro
-    ld A, \1
-    add \2
+IS_P2_N16\@ SET ((STRIN("\2", "[") == 1) && (STRIN("\2", "]") == STRLEN("\2")) && (STRIN(R16, "\2") != 0 || STRLEN("\2") != 4))
+    IF IS_P2_N16\@
+        ld A, \2
+        add \1
+    ELSE
+        ld A, \1
+        add \2
+    ENDC
     ld \1, A 
 endm
 

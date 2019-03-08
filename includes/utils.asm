@@ -86,4 +86,41 @@ pad: macro
     ENDC
 endm   
 
+
+;;; 
+; jpx cc, [r16]
+;
+; this op is stupid, never use it just thought it would be fun
+; jpx NN, [onSubtract]
+;;;
+jpx: macro
+NF EQU %01000000
+HF EQU %00100000
+
+    IF "\1" == "NH" OR "\1" == "H"
+        push AF
+        pop BC
+        ld A, C
+        and HF
+        IF "\1" == "H"
+            jp NZ, \2
+        ELSE
+            jp Z, \2
+        ENDC
+    ELIF "\1" == "NN" OR "\1" == "N"
+        push AF
+        pop BC
+        ld A, C
+        and NF
+        IF "\1" == "N"
+            jp NZ, \2
+        ELSE
+            jp Z, \2
+        ENDC        
+    ELSE   
+        jp \1, \2
+    ENDC
+
+endm
+
     ENDC

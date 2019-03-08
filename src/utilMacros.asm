@@ -2,15 +2,18 @@
 MACROS_INCLUDED SET 1
 
 ;;;
-; Defines an array 'spriteOffsets' to save cycles 
-; when moving sprites to a certain row.
+; Defines arrays spriteXOffsets, spriteYOffsets to save cycles
+; when moving sprites to a certain row or column.
 ;;;
 defineSpriteOffsetArray: macro
     IF (!DEF(SPRITE_ARRAY_DEFINED))
 SPRITE_ARRAY_DEFINED SET 1
 
-spriteOffsets:
-I SET 0
+spriteXOffsets:
+    db 0
+    db SPRITE_WIDTH
+spriteYOffsets:
+I SET 2
         REPT 25
             db I * SPRITE_WIDTH
 I SET I + 1

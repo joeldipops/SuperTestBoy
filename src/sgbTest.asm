@@ -11,7 +11,7 @@ MLT_REQ_ITEM    RB 1
 PCT_TRN_ITEM    RB 1
 MASK_EN_ITEM    RB 1
 SGB_ITEMS_COUNT RB 0
-   
+
 ;;;
 ; Sets up super game boy test page.
 ;;;
@@ -154,13 +154,13 @@ mltReqStep:
     jr NZ, .notB
         ldAny [state], SGB_TEST_STATE
         backToPrevMenu
-        jr .return
+        ret
 
 .notB
     ld16 HL, [cursorPosition]
 
     andAny B, LEFT | RIGHT | A_BTN | START
-        jr Z, .return
+        ret Z
 
     ld A, B
 
@@ -195,7 +195,7 @@ mltReqStep:
 .sendCommand
     call MLT_REQ
     call checkMltReqResult
-    jr .return    
+    ret    
 
 .not4Player
         throw
@@ -296,18 +296,29 @@ SELECTED_COLOUR         RB 1
 SELECTED_BYTE           RB 1
 COLOUR_STRING           RB 1
 
+COLOURS_ROWS EQU 4
+COLOURS_COLUMNS EQU 2
+
 ; array of where each colour will appear on screen.
+
+P_COLOUR_X EQU $02
+Q_COLOUR_X EQU $07
+
+RSSET $0b
+COLOUR_0_Y  RB 1
+COLOUR_1_Y  RB 1
+COLOUR_2_Y  RB 1
+COLOUR_3_Y  RB 1
+
 colourLocations:
-    db $02,$0b
-    db $02,$0c
-    db $02,$0d
-    db $02,$0e
+    db P_COLOUR_X, COLOUR_0_Y
+    db P_COLOUR_X, COLOUR_1_Y
+    db P_COLOUR_X, COLOUR_2_Y
+    db P_COLOUR_X, COLOUR_3_Y
 
-    db $0c,$0C
-    db $0c,$0d
-    db $0c,$0e
-
-
+    db Q_COLOUR_X, COLOUR_1_Y
+    db Q_COLOUR_X, COLOUR_2_Y
+    db Q_COLOUR_X, COLOUR_3_Y
 
 ;;;
 ; Adds the primary colour value to the buffer.
@@ -473,7 +484,33 @@ initPalpq:
     ret   
 
 initPalPqColour:
-    throw
+    push BC
+    ldAny [stateInitialised], 1
+    ldAny [cursorAltPosition], 0
+    ld16 HL, [cursorPosition]
+    ldAny [HL], 0
+    call movePalPqColourCursor
+    pop BC
+    ret
+
+movePalPqColourCursor:
+    ; Find index in colourPositions table.
+    ; [HL] is Y
+    multAny COLOURS_COLUMNS, [HL], BC
+
+    ; cursorAltPosition is X
+    ; We can ignore H, we only have 7 colours.
+    addAny L, [cursorAltPosition]
+    loadIndexAddress colourLocations, A
+    ldi A, [HL]
+    ld D, [HL]
+
+    loadIndexAddress spriteXOffsets, A
+    ldiAny [PcX], [HL]
+    
+    loadIndexAddress spriteYOffsets, D    
+    ldAny [PcY], [HL]
+    ret
 
 ;;;
 ; Allows selection of a colour to set within a palette.
@@ -483,13 +520,13 @@ palpqColourStep:
         call Z, initPalPqColour
 
     andAny B, A_BTN | START | B_BTN | UP | DOWN | LEFT | RIGHT  
-        jp Z, .return
+        ret Z
 
     andAny B, B_BTN
     jr Z, .notB
         ldAny [state], PALPQ_STATE
         backToPrevMenu
-        jr .return
+        ret
 
 .notB
     andAny B, A_BTN | START
@@ -497,7 +534,7 @@ palpqColourStep:
         ldAny [HP+ SELECTED_COLOUR], [cursorPosition]
         ldAny [stateInitialised], 0
         ldAny [state], PALPQ_BYTE_STATE
-        jr .return
+        ret
 
 .notA
     ld16 HL, [cursorPosition]
@@ -505,11 +542,41 @@ palpqColourStep:
     andAny B, UP
     jr Z, .notUp
         if0 [HL]
-        jr Z, .return
-            dec [HL]
-            jr .moveCursor
+            ret Z
+        dec [HL]
+        jr .moveCursor
 
 .notUp
+    andAny B, DOWN
+    jr Z, .notDown
+        cpAny COLOURS_ROWS - 1, [HL]           
+            ret Z
+        inc [HL]
+        jr .moveCursor
+
+.notDown
+    ld16 HL, [cursorAltPosition]
+    andAny B, LEFT
+    jr Z, .notLeft
+        if0 [HL]
+            ret Z
+        dec [HL]
+        jr .moveCursorX
+
+.notLeft
+    andAny B, RIGHT
+    jr Z, .notRight
+        cpAny COLOURS_COLUMNS - 1, [HL]
+            ret Z
+        inc [HL]
+        jr .moveCursorX
+
+.moveCursorX
+    ld16 HL, [cursorPosition]
+.moveCursor
+    call movePalPqColourCursor
+
+.notRight
 .return
     ret
 
@@ -522,14 +589,14 @@ palpqStep:
 
     ; If no button pressed, do nothing.
     andAny B, A_BTN | START | B_BTN | UP | DOWN | LEFT | RIGHT 
-        jp Z, .return
+        ret Z
 
     ; Back to previous menu if B pressed.
     andAny B, B_BTN
     jr Z, .notB
         ldAny [state], SGB_TEST_STATE
         backToPrevMenu
-        jr .return
+        ret
 .notB
     andAny B, A_BTN | START
     jr Z, .notA
@@ -539,7 +606,7 @@ palpqStep:
         ldAny [state], PALPQ_COLOUR_STATE
         ; Go to next menu level.
         incAny [cursorPosition+1]        
-        jr .return
+        ret
 .notA
     ld16 HL, [cursorPosition]
     andAny B, LEFT
@@ -553,7 +620,8 @@ palpqStep:
     andAny B, RIGHT
     jr Z, .notRight
         cpAny 3, [HL]
-            jr Z, .notRight
+            ret Z
+            ;jr Z, .notRight
         inc [HL]
         jr .moveCursor
 
@@ -620,13 +688,13 @@ maskEnStep:
     jr NZ, .notB
         ldAny [state], SGB_TEST_STATE
         backToPrevMenu
-        jr .return
+        ret
 
 .notB
     ld16 HL, [cursorPosition]
 
     andAny B, LEFT | RIGHT | A_BTN | START
-        jr Z, .return
+        ret Z
 
     ; Move the cursor if left or right pressed.
     andAny B, LEFT
@@ -677,10 +745,10 @@ maskEnStep:
     ; so we don't immediately unmask again.
     ld B, 0
     ldAny [inputThrottleCount], 32    
-    jr .return    
+    ret 
 
 .notColour
-        throw
+    throw
 
 .notA
 .moveCursor
@@ -717,41 +785,40 @@ sgbItemSelected:
     cp INIT_ITEM
     jr NZ, .notINIT
         call initialiseSGB
-        jr .return
+        ret
 
 .notINIT
     cp MLT_REQ_ITEM
     jr NZ, .notMLT_REQ
         call mltReqSelected
-        jr .return
+        ret
 
 .notMLT_REQ
     cp PALPQ_ITEM
     jr NZ, .notPALPQ
         ; for now, send PAL01 specifically and point to some random data
         call palpqSelected
-        jr .return
+        ret
 
 .notPALPQ
     cp ATTR_LIN_ITEM
     jr NZ, .notATTR_LIN
         ld C, 1 ;1 packet
         call ATTR_LIN
-        jr .return
+        ret
 
 .notATTR_LIN
     cp MASK_EN_ITEM
     jr NZ, .notMASK_EN
         ldAny [state], MASK_EN_STATE
         ldAny [stateInitialised], 0
-
-        jr .return
+        ret
 
 .notMASK_EN
     cp PCT_TRN_ITEM
     jr NZ, .notPCT_TRN
         call PCT_TRN
-        jr .return
+        ret
 
 .notPCT_TRN
     throw

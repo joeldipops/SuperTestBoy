@@ -44,7 +44,8 @@ mainMenuStep:
 .notA
 
     ; Move the cursor
-    moveCursor MENU_MARGIN_TOP
+    loadIndexAddress spriteYOffsets, [HL]
+    ldAny [PcY], [HL]
      
 .return
     pop HL
@@ -61,7 +62,8 @@ initMainMenu:
     ldAny [PcSpriteFlags], HAS_PRIORITY | USE_PALETTE_0
 
     ld16 HL, [cursorPosition]
-    moveCursor MENU_MARGIN_TOP
+    loadIndexAddress spriteYOffsets, [HL]
+    ldAny [PcY], [HL]
 
     ldAny [stateInitialised], 1
 

@@ -12,6 +12,81 @@ PCT_TRN_ITEM    RB 1
 MASK_EN_ITEM    RB 1
 SGB_ITEMS_COUNT RB 0
 
+; Row to draw cursor sprite for commands with additional options.
+COMMAND_OPTIONS_Y EQU SGB_ITEMS_COUNT * SPRITE_WIDTH + MENU_MARGIN_TOP + (SPRITE_WIDTH * 3)
+
+maskEnXPositions:
+    db 2 * SPRITE_WIDTH     ; Freeze screen
+    db 8 * SPRITE_WIDTH     ; Black screen
+    db 14 * SPRITE_WIDTH    ; Fill screen with colour 0
+
+mltReqValues:
+    db 1, 2, 4
+
+mltReqXPositions:
+    db 2 * SPRITE_WIDTH
+    db 5 * SPRITE_WIDTH
+    db 8 * SPRITE_WIDTH
+
+;;;
+; PALPQ Constants
+;;;
+
+; PALPQ Palette types
+PAL01X EQU 2
+PAL23X EQU 7
+PAL03X EQU 12
+PAL12X EQU 17
+
+paletteXPositions:    
+    db PAL01X * SPRITE_WIDTH
+    db PAL23X * SPRITE_WIDTH    
+    db PAL03X * SPRITE_WIDTH
+    db PAL12X * SPRITE_WIDTH
+
+;;;
+; Heap offsets for palpq state.
+;;;
+
+; Each colour is a word
+RSRESET
+PQ                      RB 1
+P_COLOUR_0              RW 1
+P_COLOUR_1              RW 1
+P_COLOUR_2              RW 1
+P_COLOUR_3              RW 1
+Q_COLOUR_1              RW 1
+Q_COLOUR_2              RW 1
+Q_COLOUR_3              RW 1
+CURRENT_RENDER_COLOUR   RW 1
+SELECTED_COLOUR         RB 1
+SELECTED_BYTE           RB 1
+COLOUR_STRING           RB 1
+
+COLOURS_ROWS EQU 4
+COLOURS_COLUMNS EQU 2
+
+; array of where each colour will appear on screen.
+
+P_COLOUR_X EQU $02
+Q_COLOUR_X EQU $07
+
+RSSET $0b
+COLOUR_0_Y  RB 1
+COLOUR_1_Y  RB 1
+COLOUR_2_Y  RB 1
+COLOUR_3_Y  RB 1
+
+colourLocations:
+    db P_COLOUR_X, COLOUR_0_Y
+    db P_COLOUR_X, COLOUR_1_Y
+    db P_COLOUR_X, COLOUR_2_Y
+    db P_COLOUR_X, COLOUR_3_Y
+
+    db Q_COLOUR_X, COLOUR_1_Y
+    db Q_COLOUR_X, COLOUR_2_Y
+    db Q_COLOUR_X, COLOUR_3_Y
+
 ;;;
 ; Sets up super game boy test page.
 ;;;
@@ -23,7 +98,7 @@ initSgbTest:
     ldAny [inputThrottleAmount], INPUT_THROTTLE
 
     ld16 HL, [cursorPosition]
-    moveCursor MENU_MARGIN_TOP + SPRITE_WIDTH
+    moveCursor 1
 
     ldAny [PcX], MENU_MARGIN_LEFT
     ldAny [PcImage], CURSOR
@@ -79,7 +154,7 @@ initMltReq:
     ld BC, BACKGROUND_WIDTH
     call setVRAM
 
-    ld A, SGB_ITEMS_COUNT * SPRITE_WIDTH + MENU_MARGIN_TOP + (SPRITE_WIDTH * 3)
+    ld A, COMMAND_OPTIONS_Y
     ld [PcY], A
     ld [SpriteY + SPRITE_SIZE * 0], A
     ld [SpriteY + SPRITE_SIZE * 1], A
@@ -246,81 +321,6 @@ executePalpq:
     ret
 
 ;;;
-; PALPQ Constants
-;;;
-
-; PALPQ Palette types
-PAL01X EQU 2
-PAL23X EQU 7
-PAL03X EQU 12
-PAL12X EQU 17
-
-paletteXPositions:    
-    db PAL01X * SPRITE_WIDTH
-    db PAL23X * SPRITE_WIDTH    
-    db PAL03X * SPRITE_WIDTH
-    db PAL12X * SPRITE_WIDTH
-
-maskEnXPositions:
-    db 2 * SPRITE_WIDTH     ; Freeze screen
-    db 8 * SPRITE_WIDTH     ; Black screen
-    db 14 * SPRITE_WIDTH    ; Fill screen with colour 0
-
-mltReqValues:
-    db 1, 2, 4
-
-mltReqXPositions:
-    db 2 * SPRITE_WIDTH
-    db 5 * SPRITE_WIDTH
-    db 8 * SPRITE_WIDTH
-
-;;;
-; Heap offsets for palpq state.
-;;;
-
-; Selected palette
-
-
-; Each colour is a word
-RSRESET
-PQ                      RB 1
-P_COLOUR_0              RW 1
-P_COLOUR_1              RW 1
-P_COLOUR_2              RW 1
-P_COLOUR_3              RW 1
-Q_COLOUR_1              RW 1
-Q_COLOUR_2              RW 1
-Q_COLOUR_3              RW 1
-CURRENT_RENDER_COLOUR   RW 1
-SELECTED_COLOUR         RB 1
-SELECTED_BYTE           RB 1
-COLOUR_STRING           RB 1
-
-COLOURS_ROWS EQU 4
-COLOURS_COLUMNS EQU 2
-
-; array of where each colour will appear on screen.
-
-P_COLOUR_X EQU $02
-Q_COLOUR_X EQU $07
-
-RSSET $0b
-COLOUR_0_Y  RB 1
-COLOUR_1_Y  RB 1
-COLOUR_2_Y  RB 1
-COLOUR_3_Y  RB 1
-
-colourLocations:
-    db P_COLOUR_X, COLOUR_0_Y
-    db P_COLOUR_X, COLOUR_1_Y
-    db P_COLOUR_X, COLOUR_2_Y
-    db P_COLOUR_X, COLOUR_3_Y
-
-    db Q_COLOUR_X, COLOUR_1_Y
-    db Q_COLOUR_X, COLOUR_2_Y
-    db Q_COLOUR_X, COLOUR_3_Y
-
-;;;
 ; Adds the primary colour value to the buffer.
 ; @param A Primary Colour 5yte 
 ; @param DE Next buffer address
@@ -445,9 +445,8 @@ initPalpq:
     ld BC, BACKGROUND_WIDTH
     call setVRAM
 
-    ld A, SGB_ITEMS_COUNT * SPRITE_WIDTH + MENU_MARGIN_TOP + (SPRITE_WIDTH * 3)
+    ld A, COMMAND_OPTIONS_Y
     ld [PcY], A
-
     ld A, SGB_ITEMS_COUNT + 3
     
     ; Palette Selection
@@ -481,14 +480,20 @@ initPalpq:
 
     incAny [cursorPosition+1]
     ldAny [stateInitialised], 1
+
+    ld16 HL, [cursorPosition]
+    loadIndexAddress paletteXPositions, [HL]
+    ldAny [PcX], [HL]    
     ret   
 
 initPalPqColour:
     push BC
+
     ldAny [stateInitialised], 1
-    ldAny [cursorAltPosition], 0
+    incAny [cursorPosition+1]
     ld16 HL, [cursorPosition]
     ldAny [HL], 0
+    ldAny [cursorAltPosition], 0
     call movePalPqColourCursor
     pop BC
     ret
@@ -525,7 +530,17 @@ palpqColourStep:
     andAny B, B_BTN
     jr Z, .notB
         ldAny [state], PALPQ_STATE
-        backToPrevMenu
+        call resetForeground
+        ; Set position to 0 and dec depth.
+        ld16 HL, [cursorPosition]
+        xor A
+        ld [HL], A
+        decAny [cursorPosition + 1]
+
+        ld16 HL, [cursorPosition]
+        loadIndexAddress paletteXPositions, [HL]
+        ldAny [PcX], [HL]           
+        ldAny [PcY], COMMAND_OPTIONS_Y
         ret
 
 .notB
@@ -605,7 +620,6 @@ palpqStep:
         ldAny [stateInitialised], 0
         ldAny [state], PALPQ_COLOUR_STATE
         ; Go to next menu level.
-        incAny [cursorPosition+1]        
         ret
 .notA
     ld16 HL, [cursorPosition]
@@ -651,7 +665,7 @@ initMaskEn:
     ld BC, BACKGROUND_WIDTH
     call setVRAM
 
-    ld A, SGB_ITEMS_COUNT * SPRITE_WIDTH + MENU_MARGIN_TOP + (SPRITE_WIDTH * 3)
+    ld A, COMMAND_OPTIONS_Y
     ld [PcY], A
 
     ld A, SGB_ITEMS_COUNT + 3
@@ -871,7 +885,7 @@ sgbTestStep:
         jr .return
 
 .notA
-    moveCursor MENU_MARGIN_TOP + SPRITE_WIDTH 
+    moveCursor 1
 
 .return
     pop HL

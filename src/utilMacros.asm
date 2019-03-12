@@ -25,15 +25,14 @@ endm
 
 ;;; 
 ; Places the cursor according to the value at [HL]
-; @param \1 Top margin
+; @param \1 Top margin in tiles
 ; @reg [HL] Logical y-position of the cursor
 ;;;
 moveCursor: macro
     ld A, [HL]
-    mult SPRITE_WIDTH
-    ld A, L
-    add \1
-    ld [PcY], A
+    add A, \1
+    loadIndexAddress spriteYOffsets, A
+    ldAny [PcY], [HL]
 endm
 
 ;;;

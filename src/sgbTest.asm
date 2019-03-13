@@ -69,7 +69,7 @@ COLOURS_COLUMNS EQU 2
 ; array of where each colour will appear on screen.
 
 P_COLOUR_X EQU $02
-Q_COLOUR_X EQU $07
+Q_COLOUR_X EQU $09
 
 RSSET $0b
 COLOUR_0_Y  RB 1
@@ -493,20 +493,18 @@ initPalPqColour:
     incAny [cursorPosition+1]
     ld16 HL, [cursorPosition]
     ldAny [HL], 0
-    ldAny [cursorAltPosition], 0
     call movePalPqColourCursor
     pop BC
     ret
 
+;;;
+; Move cursor sprite to the correct position using the colourLocations table.
+; @param [HL] the cursorPosition.
+;;;
 movePalPqColourCursor:
-    ; Find index in colourPositions table.
-    ; [HL] is Y
-    multAny COLOURS_COLUMNS, [HL], BC
+    multAny [HL], COLOURS_COLUMNS, BC
 
-    ; cursorAltPosition is X
-    ; We can ignore H, we only have 7 colours.
-    addAny L, [cursorAltPosition]
-    loadIndexAddress colourLocations, A
+    loadIndexAddress colourLocations, L
     ldi A, [HL]
     ld D, [HL]
 
@@ -524,20 +522,22 @@ palpqColourStep:
     if0 [stateInitialised]
         call Z, initPalPqColour
 
-    andAny B, A_BTN | START | B_BTN | UP | DOWN | LEFT | RIGHT  
+    andAny B, A_BTN | START | B_BTN | UP | DOWN 
         ret Z
 
     andAny B, B_BTN
     jr Z, .notB
         ldAny [state], PALPQ_STATE
         call resetForeground
-        ; Set position to 0 and dec depth.
+
+        ; Set position to 0 and dec menu depth.
         ld16 HL, [cursorPosition]
         xor A
         ld [HL], A
-        decAny [cursorPosition + 1]
+        dec HL
+        ldAny [cursorPosition + 1], L
 
-        ld16 HL, [cursorPosition]
+        ; Place the cursor sprite back to its palette select.
         loadIndexAddress paletteXPositions, [HL]
         ldAny [PcX], [HL]           
         ldAny [PcY], COMMAND_OPTIONS_Y
@@ -564,34 +564,17 @@ palpqColourStep:
 .notUp
     andAny B, DOWN
     jr Z, .notDown
-        cpAny COLOURS_ROWS - 1, [HL]           
+        cpAny COLOURS_ROWS * COLOURS_COLUMNS - 2, [HL]           
             ret Z
         inc [HL]
         jr .moveCursor
-
-.notDown
-    ld16 HL, [cursorAltPosition]
-    andAny B, LEFT
-    jr Z, .notLeft
-        if0 [HL]
-            ret Z
-        dec [HL]
-        jr .moveCursorX
-
-.notLeft
-    andAny B, RIGHT
-    jr Z, .notRight
-        cpAny COLOURS_COLUMNS - 1, [HL]
-            ret Z
-        inc [HL]
-        jr .moveCursorX
 
 .moveCursorX
     ld16 HL, [cursorPosition]
 .moveCursor
     call movePalPqColourCursor
 
-.notRight
+.notDown
 .return
     ret
 

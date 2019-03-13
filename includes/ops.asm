@@ -75,16 +75,17 @@ VALUE\@ EQUS "\1"
     IF _NARG == 2
         SHIFT
 TEMP\@ EQUS "\1"
-        ; I should be able to use || here, but my second condition was never true, despite working as expected im the ELIF
-        IF STRLEN("{TEMP\@}") == 2 && STRIN(R16, "{TEMP\@}") == 0
-            FAIL "r16 must be either BC or DE"
-        ELIF "{TEMP\@}" == "HL"
+        IF !("{TEMP\@}" == "BC") || ("{TEMP\@}" == "DE")
             FAIL "r16 must be either BC or DE"
         ENDC
     ELSE
 TEMP\@ EQUS "BC"
 HAS_SIDE_AFFECTS\@ SET 1        
         push BC
+    ENDC
+
+    IF ("{VALUE\@}" == "[HL]") || ("{VALUE\@}" == "H") || ("{VALUE\@}" == "L")
+        FAIL "multiplying by H or L is not yet implemented."
     ENDC
 
     ld HIGH(TEMP\@), 0

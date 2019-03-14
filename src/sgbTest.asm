@@ -232,35 +232,17 @@ mltReqStep:
         ret
 
 .notB
-    ld16 HL, [cursorPosition]
-
     andAny B, LEFT | RIGHT | A_BTN | START
         ret Z
 
-    ld A, B
-
-    ; Move the cursor if left or right pressed.
-    cp LEFT
-    jr NZ, .notLeft
-        ; Don't go less than 0
-        cpAny 0, [HL]
-            jr Z, .notLeft
-        dec [HL]
-        jr .moveCursor
-
-.notLeft    
-    cp RIGHT
-    jr NZ, .notRight
-        cpAny 2, [HL]
-            jr Z, .notRight
-        inc [HL]
-        jr .moveCursor
+    ld16 HL, [cursorPosition]
+    adjustCursor .moveCursor, 2, LEFT, RIGHT
 
 .notRight
     ; When a or start is pressed
     ; Depending on what's highlighted, set the corresponding value in C
     ; And then run the command.
-    ld B, A
+    ld A, B
     and A_BTN | START
     jr Z, .notA
         loadIndexAddress mltReqValues, [HL]
@@ -484,7 +466,34 @@ initPalpq:
     ld16 HL, [cursorPosition]
     loadIndexAddress paletteXPositions, [HL]
     ldAny [PcX], [HL]    
-    ret   
+    ret 
+
+initPalPqByte:
+    incAny [cursorPosition+1]
+    ldAny [stateInitialised], 1
+    ld16 HL, [cursorPosition]
+    ld [HL], 0
+
+palpqByteStep:
+    if0 [stateInitialised]
+        call Z, initPalPqByte
+
+    andAny B, B_BTN
+    jr Z, .notB
+        ldAny [state], PALPQ_COLOUR_STATE
+        ld16 HL, [cursorPosition]
+        xor A
+        ld [HL], A
+        dec HL
+        ldAny [cursorPosition + 1], L
+        ret
+
+.notB
+    ld16 HL, [cursorPosition]
+    adjustCursor .moveCursor, 8, LEFT, RIGHT
+        
+.moveCursor
+    ret
 
 initPalPqColour:
     push BC
@@ -553,21 +562,8 @@ palpqColourStep:
 
 .notA
     ld16 HL, [cursorPosition]
+    adjustCursor .moveCursor, COLOURS_ROWS * COLOURS_COLUMNS - 2, UP, DOWN
 
-    andAny B, UP
-    jr Z, .notUp
-        if0 [HL]
-            ret Z
-        dec [HL]
-        jr .moveCursor
-
-.notUp
-    andAny B, DOWN
-    jr Z, .notDown
-        cpAny COLOURS_ROWS * COLOURS_COLUMNS - 2, [HL]           
-            ret Z
-        inc [HL]
-        jr .moveCursor
 
 .moveCursorX
     ld16 HL, [cursorPosition]
@@ -606,21 +602,7 @@ palpqStep:
         ret
 .notA
     ld16 HL, [cursorPosition]
-    andAny B, LEFT
-    jr Z, .notLeft
-        ; Don't go less than 0
-        cpAny 0, [HL]
-            jr Z, .notLeft
-        dec [HL]
-        jr .moveCursor    
-.notLeft
-    andAny B, RIGHT
-    jr Z, .notRight
-        cpAny 3, [HL]
-            ret Z
-            ;jr Z, .notRight
-        inc [HL]
-        jr .moveCursor
+    adjustCursor .moveCursor, 3, LEFT, RIGHT
 
 .moveCursor
     loadIndexAddress paletteXPositions, [HL]
@@ -688,28 +670,11 @@ maskEnStep:
         ret
 
 .notB
-    ld16 HL, [cursorPosition]
-
     andAny B, LEFT | RIGHT | A_BTN | START
         ret Z
 
-    ; Move the cursor if left or right pressed.
-    andAny B, LEFT
-    jr Z, .notLeft
-        ; Don't go less than 0
-        cpAny 0, [HL]
-            jr Z, .notLeft
-        dec [HL]
-        jr .moveCursor
-
-.notLeft    
-    andAny B, RIGHT
-    jr Z, .notRight
-        ; Don't go more than 2
-        cpAny 2, [HL]
-            jr Z, .notRight
-        inc [HL]
-        jr .moveCursor
+    ld16 HL, [cursorPosition]
+    adjustCursor .moveCursor, 2, LEFT, RIGHT
 
 .notRight
     ; When a or start is pressed
@@ -845,29 +810,15 @@ sgbTestStep:
         jr Z, .return
 
     ld16 HL, [cursorPosition]
-    andAny B, UP
-        jr Z, .notUp
+    adjustCursor .moveCursor, SGB_ITEMS_COUNT - 1, UP, DOWN
 
-        if0 [HL]
-            jr Z, .notUp
-            dec [HL]
-
-.notUp
-    andAny B, DOWN
-        jr Z, .notDown
-        
-        ; Do nothing if alread at bottom of menu.
-        cpAny SGB_ITEMS_COUNT - 1, [HL]
-        jr Z, .notDown
-            inc [HL]
-
-.notDown
     andAny B, START | A_BTN
     jr Z, .notA
         call sgbItemSelected
         jr .return
 
 .notA
+.moveCursor
     moveCursor 1
 
 .return

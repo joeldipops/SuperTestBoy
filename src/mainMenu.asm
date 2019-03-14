@@ -20,6 +20,7 @@ mainMenuStep:
 
     andAny B, START | A_BTN | DOWN | UP
         jr Z, .return
+
     andAny B, UP
         jr Z, .notUp
 

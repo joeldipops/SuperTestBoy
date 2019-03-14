@@ -299,6 +299,8 @@ runLogic:
         jp maskedEnStep
         db $00
         jp palpqColourStep
+        db $00
+        jp palpqByteStep
 
 .return
     pop DE

@@ -107,4 +107,33 @@ backToPrevMenu: macro
     ldAny [stateInitialised], 0 
 endm
 
+;;;
+; Increments/Decrements cursor position based on what button was pressed.
+; @param {int} HL address holding the cursor position.
+; @param {flags} B Indicates which joypad buttons are pressed.
+; @param {address} \1 Address to jump to after updating the cursor position.
+; @param {int} \2 The number of positions in the menu.
+; @param {button} \3 indicates button to decrease value.
+; @Param {button} \4 indicates button to increase value.
+;;;
+adjustCursor: macro
+    andAny B, \3
+    jr Z, .notDec
+        ; Don't let [HL] go less than 0
+        if0 [HL]
+            ret Z
+        dec [HL]
+        jr \1
+
+.notDec
+    andAny B, \4
+    jr Z, .notInc
+        ; Don't let HL go greater than max.
+        cpAny \2, [HL]
+            ret Z
+        inc [HL]
+        jr \1
+.notInc
+endm
+
     ENDC

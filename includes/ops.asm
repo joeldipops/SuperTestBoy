@@ -88,10 +88,17 @@ HAS_SIDE_AFFECTS\@ SET 1
         FAIL "multiplying by H or L is not yet implemented."
     ENDC
 
-    ld HIGH(TEMP\@), 0
-    ld LOW(TEMP\@), A
-    ld H, HIGH(TEMP\@)
-    ld L, HIGH(TEMP\@)
+    ;IF ("{VALUE\@}" == "[HL]") || ("{VALUE\@}" == "H") || ("{VALUE\@}" == "L")    
+    ;    push HL
+    ;    ld H, 0
+    ;    ld L, A
+     ;   pop TEMP\@
+    ;ELSE
+        ld HIGH(TEMP\@), 0
+        ld LOW(TEMP\@), A
+        ld H, HIGH(TEMP\@)
+        ld L, HIGH(TEMP\@)
+    ;ENDC
 
     ; If either operand is 0, finish now.
     or A
@@ -128,6 +135,12 @@ endm
 
 ;;;
 ; Loads byte from anywhere to anywhere else that takes a byte.
+;
+; ldAny [r16], 0
+; Cycles:
+; Bytes:
+; Flags: None
+;
 ; ldAny r8, [n16]
 ; Cycles: 5 
 ; Bytes: 4 
@@ -175,7 +188,11 @@ endm
 ;
 ;;;
 ldAny: macro
-    ld A, \2
+    IF "\2"  == "0"
+        xor A
+    ELSE
+        ld A, \2
+    ENDC
     ld \1 , A
 endm
 

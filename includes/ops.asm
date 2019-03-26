@@ -15,10 +15,10 @@ addAny: macro
 IS_P2_N16\@ SET ((STRIN("\2", "[") == 1) && (STRIN("\2", "]") == STRLEN("\2")) && (STRIN(R16, "\2") != 0 || STRLEN("\2") != 4))
     IF IS_P2_N16\@
         ld A, \2
-        add \1
+        add A, \1
     ELSE
         ld A, \1
-        add \2
+        add A, \2
     ENDC
     ld \1, A 
 endm
@@ -101,11 +101,11 @@ HAS_SIDE_AFFECTS\@ SET 1
     ;ENDC
 
     ; If either operand is 0, finish now.
-    or A
+    or A, A
         jr Z, .end\@
 
     ld A, VALUE\@
-    or A
+    or A, A
         jr Z, .end\@
 
 .loop\@
@@ -189,7 +189,7 @@ endm
 ;;;
 ldAny: macro
     IF "\2"  == "0"
-        xor A
+        xor A, A
     ELSE
         ld A, \2
     ENDC
@@ -325,9 +325,9 @@ orAny: macro
     ld A, \1
     IF "\1" == "\2"
         ; Idiot proofing phase 1
-        or A
+        or A, A
     ELSE
-        or \2
+        or A, \2
     ENDC
 endm
 
@@ -381,7 +381,7 @@ endm
 ;;;
 andAny: macro
     ld A, \1
-    and \2
+    and A, \2
 endm
 
 ;;;
@@ -434,7 +434,7 @@ endm
 ;;;
 xorAny: macro
     ld A, \1
-    xor \2
+    xor A, \2
 endm
 
 ;;;
@@ -596,6 +596,10 @@ endm
 ; 
 ;;;
 ld16: macro
+    IF (("\2" == "[HL]") || ("\2" == "[BC]")  || ("\2" == "[DE]"))
+        FAIL "register indirection not yet implemented"
+    ENDC
+
 IS_P1_R16\@ SET (STRLEN("\1") == 2 && STRIN(R16, "\1") != 0)
 IS_P2_R16\@ SET (STRLEN("\2") == 2 && STRIN(R16, "\2") != 0)
 
@@ -644,13 +648,87 @@ endm
 ;;;
 sub16: macro
     ld A, LOW(\1)
-    sub LOW(\2)
+    sub A, LOW(\2)
     ld LOW(\1), A
 
     ld A, HIGH(\1)
     sbc HIGH(\2)
     ld HIGH(\1), A
 endm
+
+;;;
+; Shifts a 16 bit register to the left
+;
+; sl16 r16
+;;;
+sl16: macro
+    IF "\1" == "HL"
+        add HL, HL
+    ELSE
+        FAIL "sl16 BC and sl16 DE not yet implemented"
+    ENDC
+endm
+
+;;;
+; and16 r16 r16
+; result in HL
+;;;
+and16: macro
+IS_P1_R16\@ SET (STRIN(R16, "\1") != 0) && (STRLEN("\1") == 2)
+IS_P2_R16\@ SET (STRIN(R16, "\2") != 0) && (STRLEN("\2") == 2)
+
+    IF IS_P1_R16\@ 
+        IF IS_P2_R16\@
+            andAny LOW(\1), LOW(\2)
+            ld L, A
+            andAny HIGH(\1), HIGH(\2)
+            ld H, A
+        ELSE
+            FAIL "Not yet implemented"
+        ENDC
+    ELSE
+        FAIL "Not yet implemented"
+    ENDC
+endm
+
+
+;;;
+; sr16 r16
+;;;
+sr16: macro
+    IF (STRLEN("\1")) != 2 || (STRIN(R16, "\1") == 0)
+        FAIL "Must be used with a 16bit register"
+    ENDC
+
+    sra HIGH(\1)
+    jr NC, .noCarry\@
+        sra LOW(\1)
+        orAny LOW(\1), %10000000
+        ld LOW(\1), A
+        .endif\@
+
+.noCarry\@
+        sra LOW(\1)
+.endif\@
+endm
+
+;;;
+; rrc16 r16
+;;;
+rrc16: macro
+    IF (STRLEN("\1")) != 2 || (STRIN(R16, "\1") == 0)
+        FAIL "Must be used with a 16bit register"
+    ENDC
+
+    rrc LOW(\1)
+    rr HIGH(\1)
+    jr NC, .noCarry\@
+        orAny LOW(\1), %10000000
+        ld LOW(\1), A
+.noCarry\@
+endm
+
+
 
 ;;;
 ; Adds two 16bit registers together. Result in the first.
@@ -662,11 +740,11 @@ endm
 ;;;
 add16: macro
     ld A, LOW(\1)
-    add LOW(\2)
+    add A, LOW(\2)
     ld LOW(\1), A 
 
     ld A, HIGH(\1)
-    adc HIGH(\2)
+    adc A, HIGH(\2)
     ld HIGH(\1), A
 endm
 

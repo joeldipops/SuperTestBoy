@@ -187,7 +187,7 @@ ATTR_LIN:
     push DE
     ld DE, sgbTransferPacket
     ld A, C
-    and %00000111
+    and A, %00000111
     or  %00101000 ; Command code $05
     ld HL, SP + 6
     ld [DE], A

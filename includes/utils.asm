@@ -66,7 +66,7 @@ endm
 ;;; 
 if0: macro
     ld A, \1
-    or A
+    or A, A
 endm
 
 ;;;

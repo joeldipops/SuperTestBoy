@@ -35,7 +35,7 @@ printString:
     ld16 BC, HL
 .loop
         ldi A, [HL]
-        or A
+        or A, A
     jr NZ, .loop
     sub16 HL, BC
     ; 16 bit subtraction.
@@ -68,7 +68,7 @@ coordsToAddress:
 
     ; Use either map depending on what's in A
     pop AF
-    or A
+    or A, A
     jr NZ, .notMap1
         ld DE, BackgroundMap1
         jr .endMap

@@ -81,16 +81,6 @@ popAll: macro
     pop AF
 endm
 
-;;; 
-; Lets us put a break point on a nop
-;;;
-debugger: macro
-    or A
-    jr NZ .skip
-    nop
-.skip 
-endm
-
 ;;;
 ; Jumps back to the previous menu level.
 ;;;
@@ -100,7 +90,7 @@ backToPrevMenu: macro
     
     ; Set position to 0 and dec depth.
     ld16 HL, [cursorPosition]
-    xor A
+    xor A, A
     ld [HL], A
     decAny [cursorPosition + 1]
 

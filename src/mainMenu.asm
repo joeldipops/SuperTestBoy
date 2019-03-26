@@ -9,47 +9,26 @@ MENU_ITEMS_COUNT EQU 3
 ; @param B The joypad state 
 ;;;
 mainMenuStep:
-    push HL
-
-    ld A, [stateInitialised]
-    or A
+    if0 [stateInitialised]
         call Z, initMainMenu
 
     ; if no relevant buttons pressed.
-    ld16 HL, [cursorPosition]
-
     andAny B, START | A_BTN | DOWN | UP
-        jr Z, .return
+        ret Z
 
-    andAny B, UP
-        jr Z, .notUp
-
-        ; If already at top of menu, bail
-        if0 [HL]
-            jr Z, .notUp
-            dec [HL]
-
-.notUp
-    andAny B, DOWN
-    jr Z, .notDown
-        ; If already at bottom of menu, bail
-        cpAny MENU_ITEMS_COUNT - 1, [HL] 
-        jr Z, .notDown
-            inc [HL]
-
-.notDown
     andAny B, START | A_BTN
     jr Z, .notA
         call mainMenuItemSelected
-        jr .return
-.notA
+        ret    
 
+.notA
+    ld16 HL, [cursorPosition]
+    adjustCursor .moveCursor, MENU_ITEMS_COUNT - 1, UP, DOWN
+
+.moveCursor
     ; Move the cursor
     loadIndexAddress spriteYOffsets, [HL]
     ldAny [PcY], [HL]
-     
-.return
-    pop HL
     ret
 
 ;;;

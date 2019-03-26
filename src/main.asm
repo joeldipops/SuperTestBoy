@@ -181,10 +181,10 @@ main:
 .loop
         ; wait for VBlank, if another interrupt occurs, start waiting again.
         ld A, [InterruptFlags]
-        and INTERRUPT_VBLANK
+        and A, INTERRUPT_VBLANK
     jr Z, .loop          ; if (!isInVBlank) continue
   
-        and ~INTERRUPT_VBLANK
+        and A, ~INTERRUPT_VBLANK
         ld [InterruptFlags], A ; isInVBlank = 0
         
         call loadInput
@@ -208,8 +208,7 @@ INCLUDE "src/sgbTest.asm"
 ; @output B - the pressed buttons in format <DpadABSS>
 ;;;
 loadInput:
-    ld A, [inputThrottleCount]
-    or A
+    if0 [inputThrottleCount]
     jr Z, .else
         dec A
         ld [inputThrottleCount], A
@@ -244,7 +243,7 @@ loadInput:
     and $0f
     ; don't overwrite what we already have in B
     swap A
-    or B
+    or A, B
     ld B, A
     
     ; Reset Joypad register
@@ -300,7 +299,7 @@ runLogic:
         db $00
         jp palpqColourStep
         db $00
-        jp palpqByteStep
+        jp palpqNibbleStep
 
 .return
     pop DE

@@ -120,8 +120,7 @@ endm
 ;;;
 joypadTestStep:
     ; Init if haven't already
-    ld A, [stateInitialised]
-    or A
+    if0 [stateInitialised]
         call Z, initJoypadTest
     
     ; Go back if A, B, START, SELECT all held down.

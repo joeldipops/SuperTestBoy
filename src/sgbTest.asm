@@ -60,8 +60,9 @@ Q_COLOUR_2              RW 1
 Q_COLOUR_3              RW 1
 CURRENT_RENDER_COLOUR   RW 1
 SELECTED_COLOUR         RB 1
-SELECTED_BYTE           RB 1
+SELECTED_NIBBLE         RB 1
 COLOUR_STRING           RB 1
+SELECTED_COLOUR_ADDRESS RW 1
 
 COLOURS_ROWS EQU 4
 COLOURS_COLUMNS EQU 2
@@ -242,8 +243,7 @@ mltReqStep:
     ; When a or start is pressed
     ; Depending on what's highlighted, set the corresponding value in C
     ; And then run the command.
-    ld A, B
-    and A_BTN | START
+    andAny B, A_BTN | START
     jr Z, .notA
         loadIndexAddress mltReqValues, [HL]
         ld C, [HL]
@@ -326,7 +326,7 @@ writeColour:
 
     ; Second character can be 0 - F
     ld A, B
-    and %00001111
+    and A, %00001111
 
     cp $a 
     jr NC, .gt9
@@ -362,7 +362,7 @@ renderPalPqColours:
         ld A, [HP+ CURRENT_RENDER_COLOUR]
         srl A
         srl A
-        and %00011111
+        and A, %00011111
         call writeColour
 
         ; Green crosses two bytes
@@ -375,17 +375,17 @@ renderPalPqColours:
         andAny D, %00011000
         ld D, A
         andAny E, %00000111
-        or D
+        or A, D
         pop DE
         call writeColour        
 
         ; Blue is simple.
         ld A, [HP+ CURRENT_RENDER_COLOUR+1]
-        and %00011111
+        and A, %00011111
         call writeColour
 
         ; 0 terminate the string.
-        xor A
+        xor A, A
         ld [DE], A
         inc DE
 
@@ -455,7 +455,7 @@ initPalpq:
     ; Initialise the heap
     ld DE, HP+ P_COLOUR_0
     ld BC, Q_COLOUR_3 + 1
-    xor A
+    xor A, A
     rst memset
 
     call renderPalPqColours
@@ -468,31 +468,236 @@ initPalpq:
     ldAny [PcX], [HL]    
     ret 
 
-initPalPqByte:
-    incAny [cursorPosition+1]
+initPalPqNibble:
+    incAny [cursorPosition + 1]
     ldAny [stateInitialised], 1
     ld16 HL, [cursorPosition]
     ld [HL], 0
+    ldAny [PcImage], "_"
+    
+    addAny [PcX], SPRITE_WIDTH
+    addAny [PcY], 2
 
-palpqByteStep:
+;;;
+; Changes the digit representing a nibble within a 16 bit colour.
+;;;
+updateColourDigit:
+    ; UP and DOWN cycle through colour digits.
+    ; high digit is 0-1, low digit is 0-f
+    
+    ; We want B on the stack so we can check the button press later.
+    push BC
+
+    ; stash the cursor into E and D
+    ld E, [HL]
+    ld D, E
+
+    ; Load the selected colour data into HL
+    ldAny C, [HP + SELECTED_COLOUR]
+    ld HL, HP + P_COLOUR_0
+    xor A, A
+    ld B, A
+    add HL, BC
+
+    ; We'll want this again later.
+    ldAny [HP + SELECTED_COLOUR_ADDRESS], H
+    ldAny [HP + SELECTED_COLOUR_ADDRESS + 1], L
+    
+    ; Load the actual colour in to HL
+    ldiAny B, [HL]
+    ld C, [HL]
+    ld16 HL, BC
+    
+    ; shift HL left to get rid of transparency bit
+    sl16 HL
+
+    ; If E is 0, skip the loop
+    ld A, E
+    and A, A
+        jr Z, .until
+
+; Shift HL so that the nibble we care about is at the top of H.
+; Colours are 5 bits, so two digits set the colour 0-1 and 0-f
+; E is which digit we are currently updating.
+.forE
+        ; if E is even
+        and A, %00000001
+            jr Z, .ifEven 
+.ifOdd
+        ; When E is odd, we need to move the entire nibble.
+        REPT 4
+            sl16 HL
+        ENDR
+        jr .endIfOddEven
+.ifEven
+        ; But when it's even, there's only one bit to worry about
+        sl16 HL
+.endIfOddEven
+        dec E
+    jr NZ, .forE
+
+.until
+
+; high bit/nibble in H is now the value we care about
+
+    pop BC
+    
+    ; check if we're looking at a high or low nibble.
+    ; odds - low, evens - high
+    andAny D, %00000001
+    jr NZ, .isLow
+;isHigh
+        ld A, H
+        ; up and down do the same thing - swap whether it's a 0 or a 1
+        cpl
+        ; mask the nibble
+        or A, %01111111
+
+        jr .restoreToHeap
+.isLow
+        andAny B, UP
+        ld A, H
+            jr Z, .notUP
+;if UP
+            ; add one to the nibble
+            add %00010000
+            jr NC, .maskNibble
+                ; if there was a carry, set back to 0
+                ld A, %00001111
+                jr .maskNibble
+
+.notUP
+            ; subtract one from the nibble.
+            sub A, %00010000
+            ; if went below %0001000, set back to $f
+            cp %00010000
+            jr NC, .maskNibble
+                ld A, %11111111
+                jr .restoreToHeap
+.maskNibble
+    or A, %00001111
+
+.restoreToHeap
+    ld H, A
+    ld L, $ff
+
+    ; Shift once to restore the transparency bit
+    rrc16 HL
+    
+    ; If D is 0, skip the loop, we're done.
+    andAny D, D
+        jr Z, .endForD
+
+.forD
+
+    andAny D, %00000001
+        jr Z, .ifEven2 
+.ifOdd2
+        ; It's the high bit, so just shift once
+        rrc16 HL
+        dec D
+        jr .endIfOddEven2
+.ifEven2
+        ; shift the low nibble    
+        REPT 4
+            rrc16 HL
+            dec D
+        ENDR
+.endIfOddEven2        
+    jr NZ, .forD
+.endForD
+
+
+    ld16 BC, HL
+
+    ld16 HL, [HP + SELECTED_COLOUR_ADDRESS]
+    ld D, [HL]
+    inc HL
+    ld E, [HL]
+
+    push HL
+    ld16 HL, BC
+    and16 HL, DE
+
+
+    pop BC
+    ldAny [BC], H
+    inc BC
+    ldAny [BC], L
+    ret
+
+;;;
+; Allows selection and modification of colour nibbles
+; rRgGbB
+;;;
+palpqNibbleStep:
     if0 [stateInitialised]
-        call Z, initPalPqByte
+        call Z, initPalPqNibble
+
+    andAny B, A_BTN | START | B_BTN | LEFT | RIGHT | UP | DOWN 
+        ret Z      
+
+    andAny B, A_BTN | START
+        ; TODO
+        ret NZ  
 
     andAny B, B_BTN
     jr Z, .notB
         ldAny [state], PALPQ_COLOUR_STATE
         ld16 HL, [cursorPosition]
-        xor A
+        xor A, A
         ld [HL], A
         dec HL
         ldAny [cursorPosition + 1], L
+        ldAny [PcImage], CURSOR
+        call movePalPqColourCursor
         ret
 
 .notB
     ld16 HL, [cursorPosition]
-    adjustCursor .moveCursor, 8, LEFT, RIGHT
+    ; LEFT and RIGTH select a digit to change.
+     ; 6 characters per colour 1F 1F 1F
+    adjustCursor .moveCursor, 5, LEFT, RIGHT
+
+; not left or right
+    call updateColourDigit
+
+    ;ld DE, HP+ P_COLOUR_0
+    ;ld BC, Q_COLOUR_3 + 1
+    ;xor A
+    ;rst memset
+
+    call renderPalPqColours    
+    ret
         
 .moveCursor
+    ; probably faster to increment PcX
+    ; ...let's see if we need to do that.
+
+    ; find the x base
+    ld A, [HP + SELECTED_COLOUR]
+    cp 4
+    ; if SELECTED_COLOUR <= 4 use P_COLOUR.
+    jr NC, .qColour
+        ld A, P_COLOUR_X * SPRITE_WIDTH
+    jr .endifQpColour
+.qColour
+        ld A, Q_COLOUR_X * SPRITE_WIDTH
+.endifQpColour
+
+    ; the base is for the cursor, we push it to the right for the nibbles.
+    add SPRITE_WIDTH
+    ld D, A
+
+    ; offset from the cursor position.
+    ld16 HL, [cursorPosition]
+    loadIndexAddress spriteXOffsets, [HL]
+    ld A, [HL]
+
+    ; add together.
+    add D
+
+    ld [PcX], A
     ret
 
 initPalPqColour:
@@ -541,7 +746,7 @@ palpqColourStep:
 
         ; Set position to 0 and dec menu depth.
         ld16 HL, [cursorPosition]
-        xor A
+        xor A, A
         ld [HL], A
         dec HL
         ldAny [cursorPosition + 1], L
@@ -555,9 +760,11 @@ palpqColourStep:
 .notB
     andAny B, A_BTN | START
     jr Z, .notA
-        ldAny [HP+ SELECTED_COLOUR], [cursorPosition]
+        ld16 HL, [cursorPosition]
+        ldAny [HP+ SELECTED_COLOUR], [HL]
+.debugger
         ldAny [stateInitialised], 0
-        ldAny [state], PALPQ_BYTE_STATE
+        ldAny [state], PALPQ_NIBBLE_STATE
         ret
 
 .notA
@@ -726,9 +933,9 @@ maskEnStep:
 ; @param B Joypad state.
 ;;;
 maskedEnStep:
-    xor A
+    xor A, A
     ; Wait for a button press.
-    or B
+    or A, B
         ret Z
 
     ld C, MASK_NONE
@@ -794,7 +1001,7 @@ sgbItemSelected:
 sgbTestStep:
     push HL
     ld A, [stateInitialised]
-    or A
+    or A, A
         call Z, initSgbTest
 
     ; Go back if B is pressed

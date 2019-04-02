@@ -19,7 +19,7 @@ MASK_COLOUR EQU  3
 padHL: macro
     push DE
     push BC
-        xor A
+        xor A, A
         ld16 DE, HL
         ld BC, \1
         rst memset
@@ -165,7 +165,7 @@ PALpq:
     ld16 DE, HL
 
     ld BC, 1
-    xor A
+    xor A, A
     rst memset
 
     call transferSgbPackets
@@ -237,7 +237,7 @@ MLT_REQ:
     ; Set the rest of the packet to 0
     ld16 DE, HL
     ld BC, 14
-    xor A
+    xor A, A
     rst memset
 
     call transferSgbPackets

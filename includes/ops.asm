@@ -691,6 +691,29 @@ IS_P2_R16\@ SET (STRIN(R16, "\2") != 0) && (STRLEN("\2") == 2)
     ENDC
 endm
 
+;;;
+; and16 r16 r16
+; result in HL
+;;;
+or16: macro
+IS_P1_R16\@ SET (STRIN(R16, "\1") != 0) && (STRLEN("\1") == 2)
+IS_P2_R16\@ SET (STRIN(R16, "\2") != 0) && (STRLEN("\2") == 2)
+
+    IF IS_P1_R16\@ 
+        IF IS_P2_R16\@
+            orAny LOW(\1), LOW(\2)
+            ld L, A
+            orAny HIGH(\1), HIGH(\2)
+            ld H, A
+        ELSE
+            FAIL "Not yet implemented"
+        ENDC
+    ELSE
+        FAIL "Not yet implemented"
+    ENDC
+endm
+
+
 
 ;;;
 ; sr16 r16

@@ -330,12 +330,12 @@ writeColour:
 
     cp $a 
     jr NC, .gt9
-        ; if A < 10, add $30 to get the right offset
+        ; if A < 10, add $30 to get the right offset (the digits)
         ld B, $30
         jr .gt9End
 .gt9
-        ; otherwise, add $41
-        ld B, $41
+        ; otherwise, add $37 (start of the alphabet)
+        ld B, $37
 .gt9End
     add B
     ld [DE], A
@@ -477,6 +477,7 @@ initPalPqNibble:
     
     addAny [PcX], SPRITE_WIDTH
     addAny [PcY], 2
+    ret
 
 ;;;
 ; Changes the digit representing a nibble within a 16 bit colour.
@@ -494,6 +495,10 @@ updateColourDigit:
 
     ; Load the selected colour data into HL
     ldAny C, [HP + SELECTED_COLOUR]
+
+    ; multiple C by two since a colour is 16bit
+    sla C
+
     ld HL, HP + P_COLOUR_0
     xor A, A
     ld B, A
@@ -522,7 +527,7 @@ updateColourDigit:
 .forE
         ; if E is even
         and A, %00000001
-            jr Z, .ifEven 
+            jr NZ, .ifEven 
 .ifOdd
         ; When E is odd, we need to move the entire nibble.
         REPT 4
@@ -551,35 +556,44 @@ updateColourDigit:
         ; up and down do the same thing - swap whether it's a 0 or a 1
         cpl
         ; mask the nibble
-        or A, %01111111
+        and A, %10000000
+
+        ; mask is in BC (shifted once for transparency bit.)
+        ld B, %10111111
 
         jr .restoreToHeap
 .isLow
         andAny B, UP
         ld A, H
-            jr Z, .notUP
+        
+        ; Set up the mask, shifted once for transparency bit.
+        ld B, %10000111
+        
+        jr Z, .notUP
 ;if UP
             ; add one to the nibble
             add %00010000
             jr NC, .maskNibble
                 ; if there was a carry, set back to 0
-                ld A, %00001111
-                jr .maskNibble
+                ld A, %00000000
+                jr .restoreToHeap
 
 .notUP
             ; subtract one from the nibble.
             sub A, %00010000
             ; if went below %0001000, set back to $f
             cp %00010000
+
             jr NC, .maskNibble
-                ld A, %11111111
+                ld A, %11110000
                 jr .restoreToHeap
 .maskNibble
-    or A, %00001111
+    and A, %11110000
 
 .restoreToHeap
+    ld C, %11111111        
     ld H, A
-    ld L, $ff
+    ld L, $00
 
     ; Shift once to restore the transparency bit
     rrc16 HL
@@ -595,32 +609,37 @@ updateColourDigit:
 .ifOdd2
         ; It's the high bit, so just shift once
         rrc16 HL
+        rrc16 BC
         dec D
         jr .endIfOddEven2
 .ifEven2
         ; shift the low nibble    
         REPT 4
             rrc16 HL
+            rrc16 BC
             dec D
         ENDR
 .endIfOddEven2        
     jr NZ, .forD
 .endForD
+    ; HL is the new masked value.
+    push HL
 
-
-    ld16 BC, HL
-
+    ; Get the current value.
     ld16 HL, [HP + SELECTED_COLOUR_ADDRESS]
     ld D, [HL]
     inc HL
     ld E, [HL]
 
-    push HL
-    ld16 HL, BC
-    and16 HL, DE
-
-
+    ; DE is the current value.  BC is the mask
+    ld16 HL, DE
+    and16 HL, BC
     pop BC
+    ; Apply the new value.
+    or16 HL, BC
+    
+    ; And write it back to where it came from.
+    ld16 BC, [HP + SELECTED_COLOUR_ADDRESS]
     ldAny [BC], H
     inc BC
     ldAny [BC], L
@@ -661,12 +680,6 @@ palpqNibbleStep:
 
 ; not left or right
     call updateColourDigit
-
-    ;ld DE, HP+ P_COLOUR_0
-    ;ld BC, Q_COLOUR_3 + 1
-    ;xor A
-    ;rst memset
-
     call renderPalPqColours    
     ret
         

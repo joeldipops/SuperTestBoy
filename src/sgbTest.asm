@@ -526,15 +526,15 @@ updateColourDigit:
 ; E is which digit we are currently updating.
 .forE
         ; if E is even
-        and A, %00000001
-            jr NZ, .ifEven 
-.ifOdd
+        andAny E, %00000001
+            jr NZ, .ifOdd
+.ifEven
         ; When E is odd, we need to move the entire nibble.
         REPT 4
             sl16 HL
         ENDR
         jr .endIfOddEven
-.ifEven
+.ifOdd
         ; But when it's even, there's only one bit to worry about
         sl16 HL
 .endIfOddEven
@@ -600,7 +600,7 @@ updateColourDigit:
     
     ; If D is 0, skip the loop, we're done.
     andAny D, D
-        jr Z, .endForD
+        jp Z, .endForD
 
 .forD
 
@@ -617,10 +617,10 @@ updateColourDigit:
         REPT 4
             rrc16 HL
             rrc16 BC
-            dec D
         ENDR
+        dec D        
 .endIfOddEven2        
-    jr NZ, .forD
+    jp NZ, .forD
 .endForD
     ; HL is the new masked value.
     push HL

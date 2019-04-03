@@ -746,9 +746,11 @@ rrc16: macro
     rrc LOW(\1)
     rr HIGH(\1)
     jr NC, .noCarry\@
-        orAny LOW(\1), %10000000
-        ld LOW(\1), A
+        set 7, LOW(\1)
+        jr .end\@
 .noCarry\@
+        res 7, LOW(\1)
+.end\@
 endm
 
 

@@ -142,7 +142,7 @@ initialiseSGB:
 ; Transfers colour settings for SGB palettes.
 ; @param SP + 2 Palette p data.
 ; @param SP + 4 Palette q data.
-; @param HL Indicates the palettes being set.
+; @param D Indicates the palettes being set.
 ;;;
 PALpq:
     push HL
@@ -152,7 +152,15 @@ PALpq:
     ld16 BC, HL
 
     ld HL, sgbTransferPacket
-    ldiAny [HL], %00000001 ; Command code $00, 1 packet
+
+    ; Shift d 
+    ld A, D ; $00 - $03 command code (5 bits), 1 packet size (3 bits)
+    sla A
+    sla A
+    sla A
+    or A, %00000001
+
+    ldi [HL], A
 
     ; TODO - just use memcpy here.
     REPT 14

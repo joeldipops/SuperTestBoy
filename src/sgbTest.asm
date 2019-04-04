@@ -280,30 +280,29 @@ mltReqSelected:
 executePalpq:
     push HL
     ; push Palette q
-    pushColour $1f, 0, $1f
-    pushColour $1f, $1f, 0
-    pushColour $0, $1f, $1f
+    pushAny [HP + Q_COLOUR_3]
+    pushAny [HP + Q_COLOUR_2]
+    pushAny [HP + Q_COLOUR_1]
 
     ; push Palette p
-    pushColour $1f, 0, 0
-    pushColour $0, $1f, 0
-    pushColour 0, 0, $1f
+    pushAny [HP + P_COLOUR_3]
+    pushAny [HP + P_COLOUR_2]
+    pushAny [HP + P_COLOUR_1]    
 
     ; push shared colour.
-    pushColour 0, 0, 0
+    pushAny [HP + P_COLOUR_0]
 
+    ldAny D, [HP + PQ]
+    
     call PALpq
 
     add SP, 14
-
-    ldAny [state], SGB_TEST_STATE
-    backToPrevMenu
 
     pop HL
     ret
 
 ;;;
-; Adds the primary colour value to the buffer.
+; Adds the primary colour value to a buffer.
 ; @param A Primary Colour 5yte 
 ; @param DE Next buffer address
 ; @affects DE += 2
@@ -657,8 +656,11 @@ palpqNibbleStep:
         ret Z      
 
     andAny B, A_BTN | START
-        ; TODO
-        ret NZ  
+        jr Z, .notA
+       
+        call executePalpq
+        ret
+.notA
 
     andAny B, B_BTN
     jr Z, .notB
@@ -671,8 +673,8 @@ palpqNibbleStep:
         ldAny [PcImage], CURSOR
         call movePalPqColourCursor
         ret
-
 .notB
+
     ld16 HL, [cursorPosition]
     ; LEFT and RIGTH select a digit to change.
      ; 6 characters per colour 1F 1F 1F

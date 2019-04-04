@@ -50,11 +50,19 @@ endm
 
 ;;;
 ; Pushes an immediate value on to the stack.
+
 ; pushAny r16
+;
+; pushAny [n16]
+;
 ; Affects HL
 ;;;
 pushAny: macro
-    ld HL, \1
+    IF (STRLEN("\1") == 2 && STRIN(R16, "\1") != 0)
+        ld HL, \1
+    ELSE
+        ld16 HL, \1
+    ENDC
     push HL
 endm
 
@@ -716,6 +724,8 @@ endm
 
 
 ;;;
+; Shifts a 16bit register to the right.
+;
 ; sr16 r16
 ;;;
 sr16: macro
@@ -726,16 +736,19 @@ sr16: macro
     sra HIGH(\1)
     jr NC, .noCarry\@
         sra LOW(\1)
-        orAny LOW(\1), %10000000
-        ld LOW(\1), A
-        .endif\@
-
+        ; high bit carried, so bit 7 should be set
+        set 7, LOW(\1)
+        jr .end\@
 .noCarry\@
+        ; shift will leave bit 7 as 0, matching the high bit since it didn't carry.
         sra LOW(\1)
-.endif\@
+.end\@
 endm
 
 ;;;
+; Rotates a 16 bit register to the right.
+;
+; [0] -> [7 ->> 0] -> [7], C
 ; rrc16 r16
 ;;;
 rrc16: macro

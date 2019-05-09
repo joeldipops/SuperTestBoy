@@ -113,7 +113,7 @@ main:
 
     ; turn off outputs
     call turnOffScreen
-    resH AUDIO_ON_BIT, [AudioChannelSwitch]
+    resAny AUDIO_ON_BIT, [AudioChannelSwitch]
 
     ld SP, stackFloor
 
@@ -155,7 +155,7 @@ main:
     rst memcpy
 
     ; Turn the screen on and set it up.
-    ldhAny [LcdControl], \
+    ldAny [LcdControl], \
         LCD_ON | BACKGROUND_ON |  SPRITES_ON | WINDOW_OFF | SQUARE_TILES \
         | BACKGROUND_MAP_1 | WINDOW_MAP_2 | TILE_DATA_80    
 
@@ -218,7 +218,7 @@ loadInput:
     ldAny [inputThrottleCount], [inputThrottleAmount]
 
     ; Set the bit that indicates we want to read A/B/Start/Select
-    ldhAny [JoypadIo], JOYPAD_GET_BUTTONS
+    ldAny [JoypadIo], JOYPAD_GET_BUTTONS
 
     ; Read from JoypadRegister until the value settles
     ld A, [JoypadIo]
@@ -232,7 +232,7 @@ loadInput:
     ld B, A
     
     ; Now we want to read the D-Pad
-    ldhAny [JoypadIo], JOYPAD_GET_DPAD
+    ldAny [JoypadIo], JOYPAD_GET_DPAD
 
     ; Read from JoypadRegister until the value settles
     ld A, [JoypadIo]
@@ -247,7 +247,7 @@ loadInput:
     ld B, A
     
     ; Reset Joypad register
-    ldhAny [JoypadIo], JOYPAD_CLEAR
+    ldAny [JoypadIo], JOYPAD_CLEAR
     
     ret
     
@@ -331,7 +331,7 @@ onVBlank:
 ;;;
 runDmaRom:
     ; DMA starts when it recieves a memory address
-    ldhAny [DmaSourceRegister], (OamStage >> 8) ; Just the high byte, the low byte is already set (00)
+    ldAny [DmaSourceRegister], (OamStage >> 8) ; Just the high byte, the low byte is already set (00)
     ld A, DMA_WAIT_TIME
 .loop                   ; Loop until timer runs down and we can assume DMA is finished.
         dec A

@@ -19,7 +19,7 @@ initJoypadTest:
     ldAny [PcX], 0
     ldAny [PcY], 0
 
-    ldhAny [SpritePalette1], %01001110    
+    ldAny [SpritePalette1], %01001110    
 
     updateSprite \
         A_SPRITE, \

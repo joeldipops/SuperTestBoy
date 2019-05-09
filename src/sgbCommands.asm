@@ -53,8 +53,8 @@ transferSgbPackets:
     di
 
     ; Set bits 4 & 5 of Joypad register to 0
-    ldhAny [JoypadIo], 0
-    ldhAny [JoypadIo], %00110000
+    ldAny [JoypadIo], 0
+    ldAny [JoypadIo], %00110000
 
     ld HL, sgbTransferPacket
     ld BC, SGB_PACKET_SIZE 
@@ -66,14 +66,14 @@ transferSgbPackets:
             andAny E, D
             jr NZ, .not0
                 ; Represents a 0
-                ldhAny [JoypadIo], %00100000
+                ldAny [JoypadIo], %00100000
             jr .end0    
 .not0
                 ; Represents a 1
-                ldhAny [JoypadIo], %00010000
+                ldAny [JoypadIo], %00010000
 .end0
             ; Sent between each bit
-            ldhAny [JoypadIo], %00110000
+            ldAny [JoypadIo], %00110000
 
             ; Go bit by bit, so loop until D carries
             sla D
@@ -85,9 +85,9 @@ transferSgbPackets:
     jp NZ, .loopBytes
 
     ; send a final 0 to end the message
-    ldhAny [JoypadIo], %00100000
-    ldhAny [JoypadIo], %00110000
-    ldhAny [JoypadIo], 0
+    ldAny [JoypadIo], %00100000
+    ldAny [JoypadIo], %00110000
+    ldAny [JoypadIo], 0
 
     ; Wait for a few frames (280024 clocks)
     ld BC, 7000                ; 12 cycles
@@ -253,7 +253,7 @@ MLT_REQ:
 
 ;;;
 ; Command Codes:
-; $14 - PC_TRN
+; $14 - PCT_TRN
 ;
 ; Transfers screen color data for sgb frame
 ;;;
@@ -271,6 +271,7 @@ PCT_TRN:
 ;
 ; Blanks the display so VRAM can be used to transfer.
 ; @param C Mask mode - NONE/FROZEN/BLACK/COLOURED  
+;;;
 MASK_EN:
     ld HL, sgbTransferPacket
     ldiAny [HL], %10111001
@@ -278,6 +279,22 @@ MASK_EN:
     padHL 14
 
     call transferSgbPackets    
+    ret
+
+;;;
+; Command  Codes:
+; $19 - PAL_PRI
+;
+; Enable or Disable SGB colourisation
+; @param C 0 for disabled, 1 for enabled
+;;;
+PAL_PRI:
+    ld HL, sgbTransferPacket
+    ldiAny [HL], %11001001
+    ldiAny [HL], C
+    padHL 14
+
+    call transferSgbPackets
     ret
 
     ENDC

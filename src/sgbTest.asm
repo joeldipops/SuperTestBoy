@@ -721,7 +721,7 @@ initPalPqColour:
     ldAny [stateInitialised], 1
     incAny [cursorPosition+1]
     ld16 HL, [cursorPosition]
-    ldAny [HL], 0
+    ld [HL], 0
     call movePalPqColourCursor
     pop BC
     ret

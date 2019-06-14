@@ -82,7 +82,7 @@ SECTION "JoypadPressed", ROM0[$0060]
 SECTION "main", ROM0[$0100]
     nop
     jr main
-    
+    nop
     ; HEADER START
     ; not adding the logo here #illegal ;)
     db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff

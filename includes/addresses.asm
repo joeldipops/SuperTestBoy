@@ -7,6 +7,8 @@ BackgroundMap1 EQU $9800
 BackgroundMap2 EQU $9c00
 
 ; HRAM addresses
+HRAMStart EQU $ff00
+
 JoypadIo EQU $ff00              ; P1
 LinkData EQU $ff01              ; SB
 LinkControl EQU $ff02           ; SC

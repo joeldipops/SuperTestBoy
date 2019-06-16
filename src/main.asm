@@ -14,8 +14,8 @@ INCLUDE "src/utilMacros.asm"
 ; @param DE The address
 ; @param BC The number of bytes
 ;;;
-SECTION "memset", ROM0[$0010]
-memset EQU $0010
+SECTION "memset", ROM0[$0000]
+memset EQU $0000
 rst_memset:
     push HL
     ld L, A
@@ -79,7 +79,7 @@ SECTION "Serial", ROM0[$0058]
 SECTION "JoypadPressed", ROM0[$0060]
     jp onJoypadEvent
 
-SECTION "main", ROM0[$0100]
+SECTION "Header", ROM0[$0100]
     nop
     jr main
     nop
@@ -88,7 +88,6 @@ SECTION "main", ROM0[$0100]
     db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
     db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
     db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff
-    db $00
     db "SUPERTESTBOY",0,0,0 ; name
     db NO_COLOUR_SUPPORT ; Colour type 
     dw UNLICENSED ; Licensee
@@ -102,6 +101,7 @@ SECTION "main", ROM0[$0100]
     db 0 ; complement check - rgbfix sets this
     db 0 ; checksum - rgbfix sets this
 
+SECTION "Main", ROM0[$0150]
 ;;;
 ; Main loop
 ; Never returns.
@@ -180,12 +180,12 @@ main:
 
 .loop
         ; wait for VBlank, if another interrupt occurs, start waiting again.
-        ld A, [InterruptFlags]
+        ldh A, [InterruptFlags]
         and A, INTERRUPT_VBLANK
     jr Z, .loop          ; if (!isInVBlank) continue
   
         and A, ~INTERRUPT_VBLANK
-        ld [InterruptFlags], A ; isInVBlank = 0
+        ldh [InterruptFlags], A ; isInVBlank = 0
         
         call loadInput
         call runLogic
@@ -217,13 +217,15 @@ loadInput:
 .else
     ldAny [inputThrottleCount], [inputThrottleAmount]
 
+    ldAny C, JoypadIo - HRAMStart
+
     ; Set the bit that indicates we want to read A/B/Start/Select
-    ldAny [JoypadIo], JOYPAD_GET_BUTTONS
+    ldAny [C], JOYPAD_GET_BUTTONS
 
     ; Read from JoypadRegister until the value settles
-    ld A, [JoypadIo]
-    ld A, [JoypadIo]
-    ld A, [JoypadIo]
+    ld A, [C]
+    ld A, [C]    
+    ld A, [C]
     
     ; bits are 0 if pressed for some reason
     cpl
@@ -232,22 +234,22 @@ loadInput:
     ld B, A
     
     ; Now we want to read the D-Pad
-    ldAny [JoypadIo], JOYPAD_GET_DPAD
+    ldAny [C], JOYPAD_GET_DPAD
 
     ; Read from JoypadRegister until the value settles
-    ld A, [JoypadIo]
-    ld A, [JoypadIo]
-    ld A, [JoypadIo]
+    ld A, [C]
+    ld A, [C]
+    ld A, [C]
 
     cpl
-    and $0f
     ; don't overwrite what we already have in B
+    and $0f
     swap A
     or A, B
     ld B, A
     
     ; Reset Joypad register
-    ldAny [JoypadIo], JOYPAD_CLEAR
+    ldAny [C], JOYPAD_CLEAR
     
     ret
     

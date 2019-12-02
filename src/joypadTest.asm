@@ -70,7 +70,7 @@ initJoypadTest:
     ; Turn off input throttle so holding down the button counts.
     ldAny [inputThrottleAmount], 0
     ldAny [stateInitialised], 1
-   
+
     pop HL
     ret
 
@@ -89,8 +89,8 @@ backFromJoypadTest:
     setSpriteY UP_SPRITE, A, 1
     setSpriteY DOWN_SPRITE, A, 1
     setSpriteY LEFT_SPRITE, A, 1
-    setSpriteY RIGHT_SPRITE, A, 1                        
-                           
+    setSpriteY RIGHT_SPRITE, A, 1
+
     ; Wait a bit before allowing the next input so we don't keep jumping back in to joypad test after holding down A & START 
     ldAny [inputThrottleCount], 32
 
@@ -134,7 +134,7 @@ joypadTestStep:
     setButtonIndicator UP, UP_SPRITE
     setButtonIndicator DOWN, DOWN_SPRITE
     setButtonIndicator LEFT, LEFT_SPRITE
-    setButtonIndicator RIGHT, RIGHT_SPRITE            
+    setButtonIndicator RIGHT, RIGHT_SPRITE
 
     ret
     

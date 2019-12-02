@@ -81,15 +81,15 @@ backFromJoypadTest:
     ldAny [SpritePalette1], FG_PALETTE
 
     ; hide all the sprites off screen.
-    ld A, 0
-    setSpriteY A_SPRITE, A, 1
-    setSpriteY B_SPRITE, A, 1
-    setSpriteY START_SPRITE, A, 1
-    setSpriteY SELECT_SPRITE, A, 1
-    setSpriteY UP_SPRITE, A, 1
-    setSpriteY DOWN_SPRITE, A, 1
-    setSpriteY LEFT_SPRITE, A, 1
-    setSpriteY RIGHT_SPRITE, A, 1
+    xor A
+    setSpriteY A_SPRITE, A
+    setSpriteY B_SPRITE, A
+    setSpriteY START_SPRITE, A
+    setSpriteY SELECT_SPRITE, A
+    setSpriteY UP_SPRITE, A
+    setSpriteY DOWN_SPRITE, A
+    setSpriteY LEFT_SPRITE, A
+    setSpriteY RIGHT_SPRITE, A
 
     ; Wait a bit before allowing the next input so we don't keep jumping back in to joypad test after holding down A & START 
     ldAny [inputThrottleCount], 32

@@ -4,9 +4,12 @@
 initPixelTest:
     push HL
 
-    ld A, 0
-    ld D, 0
-    ld E, 0
+    ; Hide cursor
+    xor A
+    setSpriteY 0, A
+
+    ld D, A
+    ld E, A
     ld L, GRID
     ld BC, SCREEN_BYTE_WIDTH * SCREEN_BYTE_HEIGHT
     call setVRAM

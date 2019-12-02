@@ -1,7 +1,7 @@
     IF !DEF(MAIN_MENU_INCLUDED)
 MAIN_MENU_INCLUDED SET 1
 
-MENU_ITEMS_COUNT EQU 3
+MENU_ITEMS_COUNT EQU 4
 
 
 ;;;
@@ -19,7 +19,7 @@ mainMenuStep:
     andAny B, START | A_BTN
     jr Z, .notA
         call mainMenuItemSelected
-        ret    
+        ret
 
 .notA
     ld16 HL, [cursorPosition]
@@ -62,6 +62,11 @@ initMainMenu:
     ld D, 3
     ld E, 2
     call printString
+
+    ld HL, GridLabel
+    ld D, 3
+    ld E, 3
+    call printString
     ret
 
 ;;;
@@ -86,9 +91,15 @@ mainMenuItemSelected:
     cpAny 2, [HL]
         jr NZ, .notAudio
         ldAny [state], AUDIO_TEST_STATE
-        jr .return  
+        jr .return
 
 .notAudio
+    cpAny 3, [HL]
+        jr NZ, .notPixels
+        ldAny [state], PIXEL_TEST_STATE
+        jr .return
+
+.notPixels
     throw
 
 .return

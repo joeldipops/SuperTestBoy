@@ -91,7 +91,7 @@ resetBackground:
     ld E, 0
     ld L, LIGHTEST
     ld BC, SCREEN_BYTE_WIDTH * SCREEN_BYTE_HEIGHT
-    call setVRAM    
+    call setVRAM
     ret
 
 ;;;

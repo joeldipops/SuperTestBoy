@@ -69,7 +69,7 @@ initJoypadTest:
 
     ; Turn off input throttle so holding down the button counts.
     ldAny [inputThrottleAmount], 0
-    ldAny [stateInitialised], 1        
+    ldAny [stateInitialised], 1
    
     pop HL
     ret
@@ -111,7 +111,7 @@ setButtonIndicator: macro
         jr .end\@
 .else\@
         setSpriteFlags \2, HAS_PRIORITY | USE_PALETTE_0    
-.end\@    
+.end\@
 endm
 
 ;;;

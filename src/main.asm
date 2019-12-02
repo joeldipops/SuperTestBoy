@@ -132,7 +132,7 @@ main:
     
     ld A, 0
     ldh [BackgroundScrollX], A
-    ldh [BackgroundScrollY], A    
+    ldh [BackgroundScrollY], A
 
     ; Clear OAM
     ld DE, OAMStage
@@ -192,7 +192,7 @@ main:
         call runDma
     jr .loop
 
-    defineSpriteOffsetArray    
+    defineSpriteOffsetArray
 
 audioTestStep:
     throw ; Not yet implemented
@@ -202,6 +202,7 @@ INCLUDE "src/lcd.asm"
 INCLUDE "src/mainMenu.asm"
 INCLUDE "src/joypadTest.asm"
 INCLUDE "src/sgbTest.asm"
+INCLUDE "src/pixelTest.asm"
 
 ;;;
 ; Loads the pressed buttons in to B
@@ -285,11 +286,13 @@ runLogic:
         db $00
         jp mainMenuStep
         db $00
-        jp joypadTestStep    
+        jp joypadTestStep
         db $00
         jp sgbTestStep
         db $00
         jp audioTestStep
+        db $00
+        jp pixelTestStep
         db $00
         jp mltReqStep
         db $00

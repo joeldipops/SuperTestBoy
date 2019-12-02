@@ -1,12 +1,25 @@
     IF !DEF(PSEUDO_OPS_INCLUDED)
 PSEUDO_OPS_INCLUDED SET 1
 
+INCLUDE "./includes/config.inc"
+
 N8 EQUS "\"$ % 0 1 2 3 4 5 6 7 8 9\""
 R16 EQUS "\"BC DE HL bc de hl\""
 R8 EQUS "\"A B C D E H L a b c d e h l\""
+LBL_CHARS EQUS "\"_abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\""
 
 ;;;
-; Adds two values, Result in r8
+; Shows an assembly warning message unless they have been surpressed in the config.
+; @param \1 The text of the warning.
+;;;
+_warn: macro
+    IF WARNINGS_ENABLED == 1
+        WARN \1
+    ENDC
+endm
+
+;;;
+; Adds two values, Result in A
 ; addAny r8, [r16]
 ;
 ; addAny r8, [n16]
@@ -22,16 +35,16 @@ IS_P2_N16\@ SET ((STRIN("\2", "[") == 1) && (STRIN("\2", "]") == STRLEN("\2")) &
         ldAny A, \1
         add A, \2
     ENDC
-    ldAny \1, A 
+    ldAny \1, A
 endm
 
 ;;;
-; Adds two values + 1 if carry flag set. Result in r8.
+; Adds two values + 1 if carry flag set. Result in A.
 ; adcAny r8, [r16]
 ;;;
 adcAny: macro
     ldAny A, \1
-    adc \2
+    adc A, \2
     ldAny \1, A 
 endm
 
@@ -62,16 +75,8 @@ pushAny: macro
 endm
 
 ;;;
-; mult r8, r8, ?r16
-;
-; mult r8, n8, ?r16
-;
-; mult r8, [n16], ?r16
-;
-; mult r8, [r16], ?r16
-;
-; Multiplies A with r8, result in HL
-; r16 is optional register to trash (BC or DE)
+; Multiplies two values, result in HL
+; mult v8, v8, ?r16
 ;;;
 multAny: macro
     ldAny A, \1
@@ -141,85 +146,104 @@ endm
 ; Bytes:
 ; Flags: None
 ;
+; ldAny r16, SP
+; Cycles:
+; Bytes:
+; Flags: 
+; Affects: HL
+;
+; ldAny SP, r16
+; Cycles:
+; Bytes:
+; Flags: 
+; Affects: HL
 ;;;
 ldAny: macro
-    ; To check if an address is in HRAM, we have to strip off the square brackets
-    ; Do this for both operands.
-    IF ((STRIN("\1", "[") == 1) && (STRIN("\1", "]") == STRLEN("\1")))
-P1\@ EQUS STRSUB("\1", 2, STRLEN("\1") - 2)    
+    ;FAIL "\1 \2"
+    ; Are 16 bits involved?
+    IF ((STRIN(STRCAT(R16,"SP"), "\1") != 0) && (STRLEN("\1") == 2)) \
+    || ((STRIN(STRCAT(R16,"SP"), "\2") != 0) && (STRLEN("\2") == 2)) \
+    || (STRIN("\2", "SP ") == 1) \
+    || (STRIN("\2", "SP+") == 1)
+        ld16 \1, \2
     ELSE
-P1\@ EQUS "0"
-    ENDC
-
-    IF ((STRIN("\2", "[") == 1) && (STRIN("\2", "]") == STRLEN("\2")))
-P2\@ EQUS STRSUB("\2", 2, STRLEN("\2") - 2)    
-    ELSE
-P2\@ EQUS "0"
-    ENDC
-
-    ; If loading to or from A, we only need a single instruction.
-    IF (STRUPR("\1") == "A")
-        IF ("\2" == "0")
-            xor A
-        ELIF ("P2\@" >= "$ff00")
-            ldh A, \2        
+        ; Force an ldh?
+        IF (STRSUB("\1", 1, STRLEN(LDH_TOKEN)) == LDH_TOKEN) 
+IS_P1_HRAM\@ SET 1
+; strip off the #
+P1\@ EQUS STRSUB("\1", STRLEN(LDH_TOKEN) + 1, STRLEN("\1") - STRLEN(LDH_TOKEN))
         ELSE
-            ld A, \2
-        ENDC
-    ELIF (STRUPR("\2") == "A")
-        IF ("P1\@" >= "$ff00")
-            ldh \1, A
-        ELSE
-            ld \1, A
+P1\@ EQUS "\1"
+IS_P1_HRAM\@ SET 0
         ENDC
 
-    ; We only need a single instruction when loading 
-    ; * r8, r8/n8/[HL]
-    ; * [HL], r8/n8
-    ; * Passing macro to macro, we also need to check for LOW(r16) and HIGH(r16)
-    ELIF (\
-        (\
-            ((STRLEN("\1") == 1) && STRIN(R8, "\1"))\
-            || ((STRIN("\1", "LOW(") != 0) && (STRIN(R16, STRSUB("\1", 5, 2)) != 0))\
-            || ((STRIN("\1", "HIGH(") != 0) && (STRIN(R16, STRSUB("\1", 6, 2)) != 0))\
-        )\
-        && (\
-            (STRUPR("\2") == "[HL]")\
-            || ((STRLEN("\2") == 1) && (STRIN(R8, "\2") != 0))\
-            || (STRIN(N8, STRSUB("\2", 1, 1)) != 0)\
-            || ((STRIN("\2", "LOW(") != 0) && (STRIN(R16, STRSUB("\1", 5, 2)) != 0))\
-            || ((STRIN("\2", "HIGH(") != 0) && (STRIN(R16, STRSUB("\1", 6, 2)) != 0))\            
-        )\
-        || (STRUPR("\1") == "[HL]")\
-        && (\
-            ((STRLEN("\2") == 1) && (STRIN(R8, "\2") != 0))\
-            || (STRIN(N8, STRSUB("\2", 1, 1)) != 0)\
-        )\
-    )
-        ld \1, \2 
-    ELSE
-        ; otherwise, we need to load into A first.
-        IF ("P1\@" >= "$ff00")
-            IF ("P2\@" >= "$ff00")
-                ldh A, \2
-                ldh \1, A
-            ELIF ("\2" == "0")
-                ; xor A is cheaper than a load.
+        ; Force an ldh?
+        IF (STRSUB("\2", 1, STRLEN(LDH_TOKEN)) == LDH_TOKEN) 
+IS_P2_HRAM\@ SET 1
+; strip off the #
+P2\@ EQUS STRSUB("\2", 2, STRLEN("\2") - 1)
+        ELSE
+P2\@ EQUS "\2"
+IS_P2_HRAM\@ SET 0
+        ENDC
+
+        ; If loading to or from A, we only need a single instruction.
+        IF STRUPR("\1") == "A"
+            IF IS_P2_HRAM\@ == 1
+                ldh A, P2\@
+            ELIF "\2" == "0"
                 xor A
-                ldh \1, A
             ELSE
                 ld A, \2
-                ldh \1, A
             ENDC
-        ELIF ("P2\@" >= "$ff00")
-            ldh A, \2
-            ld \1, A
-        ELIF ("\2" == "0")
-            xor A
-            ld \1, A
+        ELIF STRUPR("\2") == "A"
+            IF IS_P1_HRAM\@ == 1
+                ldh P1\@, A
+            ELSE
+                ld \1, A
+            ENDC
         ELSE
-            ld A, \2
-            ld \1, A
+            ; We only need a single instruction when loading 
+            ; * r8, r8/n8/[HL]
+            ; * [HL], r8/n8
+            ; * (so anything without [] unless it's [HL])
+            IF ((STRIN("{P1\@}", "[") == 1) && (STRIN("\1", "]") == STRLEN("\1")) &&  ("{P1\@}" != "[HL]"))
+IS_P1_DIRECT\@ SET 0
+            ELSE
+IS_P1_DIRECT\@ SET 1
+            ENDC
+
+            IF ((STRIN("{P2\@}", "[") == 1) && (STRIN("\2", "]") == STRLEN("\2")) &&  ("{P2\@}" != "[HL]"))
+IS_P2_DIRECT\@ SET 0
+            ELSE
+IS_P2_DIRECT\@ SET 1
+            ENDC
+
+            IF ((IS_P1_DIRECT\@ == 1) && (IS_P2_DIRECT\@ == 1))
+                IF ("{P1\@}" == "[HL]") && ("{P2\@}" == "[HL]")
+                    ld A, [HL]
+                    ld [HL], A
+                ELSE
+                    ld P1\@, P2\@
+                ENDC
+            ELSE
+                ; otherwise, we need to load into A first.
+
+                IF "\2" == "0"
+                    ; xor A is cheaper than a ld A, 0
+                    xor A
+                ELIF IS_P2_HRAM\@ == 1
+                    ldh A, P2\@
+                ELSE
+                    ld A, \2
+                ENDC
+
+                IF IS_P1_HRAM\@ == 1
+                    ldh P1\@, A
+                ELSE
+                    ld \1, A
+                ENDC
+            ENDC
         ENDC
     ENDC
 endm
@@ -262,7 +286,9 @@ endm
 ; Flags: None
 ;;;
 ldiAny: macro
-    IF "\1" == "[HL]"
+    IF ("\1" == "[HL]") && ("\2" == "[HL]")
+        FAIL "ambiguous operation"
+    ELIF "\1" == "[HL]"
         ldAny A, \2
         ldi [HL], A
     ELIF "\2" == "[HL]"
@@ -270,6 +296,20 @@ ldiAny: macro
         ldAny \1, A
     ELSE
         FAIL "ldi requires [HL]"
+    ENDC
+endm
+
+lddAny: macro
+    IF ("\1" == "[HL]") && ("\2" == "[HL]")
+        FAIL "ambiguous operation"
+    ELIF "\1" == "[HL]"
+        ldAny A, \2
+        ldd [HL], A
+    ELIF "\2" == "[HL]"
+        ldd A, [HL]
+        ldAny \1, A
+    ELSE
+        FAIL "ldd requires [HL]"
     ENDC
 endm
 
@@ -327,7 +367,7 @@ orAny: macro
     ENDC
     IF "\1" == "\2"
         or A, A
-        WARN "1: Avoid orAny if you intended to read from \1 more than once."
+        _warn "1: Avoid orAny if you intended to read from \1 more than once."
     ELSE
         or A, \2
     ENDC
@@ -382,8 +422,15 @@ endm
 ; Flags: Z=? N=0 H=1 C=0
 ;;;
 andAny: macro
-    ldAny A, \1
-    and A, \2
+    IF "\1" != "A"
+        ldAny A, \1
+    ENDC
+    IF "\1" == "\2"
+        and A, A
+        _warn "1: Avoid andAny if you intended to read from \1 more than once."
+    ELSE
+        and A, \2
+    ENDC
 endm
 
 ;;;
@@ -435,8 +482,15 @@ endm
 ; Flags: Z=? N=0 H=0 C=0
 ;;;
 xorAny: macro
-    ldAny A, \1
-    xor A, \2
+    IF "\1" != "A"
+        ldAny A, \1
+    ENDC
+    IF "\1" == "\2"
+        xor A, A
+        _warn "1: Avoid xorAny if you intended to read from \1 more than once."
+    ELSE
+        xor A, \2
+    ENDC
 endm
 
 ;;;
@@ -568,38 +622,90 @@ ld16: macro
 IS_P1_R16\@ SET (STRLEN("\1") == 2 && STRIN(R16, "\1") != 0)
 IS_P2_R16\@ SET (STRLEN("\2") == 2 && STRIN(R16, "\2") != 0)
 
-    ; Remove the square brackets around \2 so we can find the following address ie. [\2 + 1]
-    IF ((STRIN("\2", "[") == 1) && (STRIN("\2", "]") == STRLEN("\2")))
-P2\@ EQUS STRSUB("\2", 2, STRLEN("\2") - 2)
-    ELSE
+    ; Remove the ldh token and square brackets so we can find the following address ie. [\2 + 1]
+    IF (STRSUB("\2", 1, STRLEN(LDH_TOKEN)) == LDH_TOKEN)
+IS_P2_HRAM\@ SET 1
+P2PREFIX\@ EQUS LDH_TOKEN
+        ; Remove #[ and ]
+        IF ((STRIN("\2", "[") == 2) && (STRIN("\2", "]") == STRLEN("\2")))
+P2\@ EQUS STRSUB("\2", STRLEN(LDH_TOKEN) + 2, STRLEN("\2") - (STRLEN(LDH_TOKEN) + 2))
+        ELSE
 P2\@ EQUS "\2"
-    ENDC    
+        ENDC    
+    ELSE
+P2PREFIX\@ EQUS ""
+        ; Remove [ and ]
+        IF ((STRIN("\2", "[") == 1) && (STRIN("\2", "]") == STRLEN("\2")))
+P2\@ EQUS STRSUB("\2", 2, STRLEN("\2") - 2)
+        ELSE
+P2\@ EQUS "\2"
+        ENDC    
+    ENDC
 
-    IF IS_P1_R16\@
+    ; Remove the ldh token and square brackets so we can find the following address ie. [\2 + 1]
+    IF (STRSUB("\1", 1, STRLEN(LDH_TOKEN)) == LDH_TOKEN)
+IS_P1_HRAM\@ SET 1
+P1PREFIX\@ EQUS LDH_TOKEN
+        ; Remove #[ and ]
+        IF ((STRIN("\1", "[") == 2) && (STRIN("\1", "]") == STRLEN("\1")))
+P1\@ EQUS STRSUB("\1", STRLEN(LDH_TOKEN) + 2, STRLEN("\1") - (STRLEN(LDH_TOKEN) + 2))
+        ELSE
+P1\@ EQUS "\1"
+        ENDC    
+    ELSE
+P1PREFIX\@ EQUS ""    
+        ; Remove [ and ]
+        IF ((STRIN("\1", "[") == 1) && (STRIN("\1", "]") == STRLEN("\1")))
+P1\@ EQUS STRSUB("\1", 2, STRLEN("\1") - 2)
+        ELSE
+P1\@ EQUS "\1"
+        ENDC    
+    ENDC
+
+    ; ops that support SP are a bit of a mixed bag, so will need special cases for them.
+    IF ("\1" == "SP")
+        ; Natively supported SP ops are `ld SP, HL` and `ld SP, n16
+        IF ("\2" == "HL") || ((IS_P2_R16\@ == 0) && (STRIN("\2", "[") == 0))
+            ld \1, \2
+        ELSE
+            ; HL will be affected
+            ldAny HL, \2
+            ld SP, HL
+        ENDC
+    ELIF (STRIN("\2", "SP ") != 0) || (STRIN("\2", "SP+") != 0)
+        ; normal 'LDHL'
+        ld HL, \2        
+        IF ("\1" != "HL")
+            ldAny \1, HL
+        ENDC
+    ELIF ("\2" == "SP")
+        IF (STRIN("\1", "[") != 0)
+            ld \1, SP
+        ELSE
+            ; assembler won't assemble without the +0
+            ld HL, SP+0
+            IF ("\1" != "HL")
+                ldAny \1, HL
+            ENDC
+        ENDC
+    ELIF IS_P1_R16\@
         IF IS_P2_R16\@
             ; If both operands are registers
             ld LOW(\1), LOW(\2)
             ld HIGH(\1), HIGH(\2)
         ELSE
             ; If only first operand is a register
-            ldAny HIGH(\1), [P2\@]
-            ldAny LOW(\1), [P2\@ + 1]
+            ldAny HIGH(\1), {P2PREFIX\@}[P2\@]
+            ldAny LOW(\1), {P2PREFIX\@}[P2\@ + 1]
         ENDC
     ELIF IS_P2_R16\@
-        ; Remove the square brackets around \1 so we can find the following address ie. [\1 + 1]
-        IF (STRIN("\1", "[") == 1) && (STRIN("\1", "]") == STRLEN("\1"))
-P1\@ EQUS STRSUB("\1", 2, STRLEN("\1") - 2)
-        ELSE
-P1\@ EQUS "\1"
-        ENDC
-
         ; If only second operand is a register
-        ldAny [P1\@], HIGH(\2)
-        ldAny [P1\@ + 1], LOW(\2)
+        ldAny {P1PREFIX\@}[P1\@], HIGH(\2)
+        ldAny {P1PREFIX\@}[P1\@ + 1], LOW(\2)
     ELSE
         ; If both are addresses
-        ldAny [P1\@], [P2\@]
-        ldAny [P1\@ + 1], [P2\@ + 1]
+        ldAny {P1PREFIX\@}[P1\@], {P2PREFIX\@}[P2\@]
+        ldAny {P1PREFIX\@}[P1\@ + 1], {P2PREFIX\@}[P2\@ + 1]
     ENDC
 endm
 
@@ -732,75 +838,6 @@ add16: macro
 endm
 
 ;;;
-; Jumps to address n16 if in previous cp, sub or sbc, A < x
-; jplt n16
-; Cycles: 4 if jump occurs, 3 otherwise
-; Bytes: 3
-; Flags:
-;;;
-jplt: macro
-    jp C, \1
-endm
-
-;;;
-; Jumps to address n16 if in previous cp, sub or sbc, A <= x
-; jplte n16
-; Cycles: 4 - 7 depending on result
-; Bytes: 6
-; Flags: None
-;;;
-jplte: macro
-    jp C, \1
-    jp Z, \1
-endm
-
-;;;
-; Jumps to address n16 if in previous cp, sub or sbc, A > x
-; jpgt n16
-; Cycles: 3 - 6 depending on result.
-; Bytes: 5
-; Flags: None
-;;;
-jpgt: macro
-    jr C, .end\@
-    jp NZ, \1
-.end\@
-endm
-
-;;;
-; Jumps to address n16 if in previous cp, sub or sbc, A >= x
-; jpgte n16
-; Cycles: 4 if jump occurs, 3 otherwise
-; Bytes: 3
-; Flags: None
-;;;
-jpgte: macro
-    jp NC, \1
-endm
-
-;;;
-; Jumps to address n16 if in previous cp, sub or sbc, A = x
-; jpeq n16
-; Cycles: 4 if jump occurs, 3 otherwise
-; Bytes: 3
-; Flags: None
-;;;
-jpeq: macro
-    jp Z, \1
-endm
-
-;;;
-; Jumps to address n16 if in previous cp, sub or sbc, A != x
-; jpne n16
-; Cycles: 4 if jump occurs, 3 otherwise
-; Bytes: 3
-; Flags: None
-;;;
-jpne: macro
-    jp NZ, \1
-endm
-
-;;;
 ; mult r8, ?r16
 ;
 ; mult n8, ?r16
@@ -815,11 +852,6 @@ endm
 mult: macro
 HAS_SIDE_AFFECTS\@ SET 0
 VALUE\@ EQUS "\1"
-
-    IF ("{VALUE\@}" == "[HL]") || ("{VALUE\@}" == "H") || ("{VALUE\@}" == "L")
-        FAIL "multiplying by H or L is not yet implemented."
-    ENDC    
-
     ; If a second param is supplied, use that as our temp register and don't both pushpopping
     IF _NARG == 2
         SHIFT
@@ -833,21 +865,21 @@ HAS_SIDE_AFFECTS\@ SET 1
         push BC
     ENDC
 
-    ld H, A
-
     ; Skip this step if we're already using that register.
     IF (STRSUB("{TEMP\@}", 2, 1) != "{VALUE\@}")
-        ldAny LOW({TEMP\@}), {VALUE\@}
-    ENDC
-    ld L, 0
-    ld HIGH(TEMP\@), L        
+        ldAny LOW(TEMP\@), {VALUE\@}
+    ENDC    
 
-    ld A, 7    
+    ld H, A
+    ld L, 0
+    ld HIGH(TEMP\@), L
+
+    ld A, 7
 
     ; Optimized first iteration
     sla H
     jr NC, .loop\@
-    ldAny L, LOW({TEMP\@})
+    ld L, LOW({TEMP\@})
 .loop\@
         add HL, HL
         jr NC, .noAdd\@
@@ -860,4 +892,42 @@ HAS_SIDE_AFFECTS\@ SET 1
         pop BC
     ENDC 
 endm
+
+;;;
+; div A, r8
+;
+; Divides A by r8, quotient in HL, remainder in A.
+; If r8 is not one of B,C,D or E, C will be trashed
+;;;
+divide: macro
+    IF STRIN("D E B C", "\1") != 0
+P1\@ EQUS "\1"
+    ELSE
+        ldAny C, \1
+P1\@ EQUS "C"
+    ENDC
+    ld H, 8
+    ld L, A
+
+    xor A
+    IF "{ERROR_HANDLER}" != ""
+        FAIL "blah"
+        cp P1\@
+        jr NZ, .noError\@
+        ERROR_HANDLER
+.noError\@
+    ENDC    
+.loop\@
+        sla L
+        rla
+        cp P1\@
+        jr C, .carry\@
+            inc L
+            sub P1\@
+.carry\@
+        dec H
+        jr NZ, .loop\@
+endm
+
+;INCLUDE "./includes/jumps.inc"
     ENDC

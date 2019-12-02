@@ -1,6 +1,7 @@
 JoypadLabel:    dbs "Test Joypad" 
 SGBLabel:       dbs "Test Super GB"
 AudioLabel:     dbs "Test Audio"
+GridLabel:      dbs "Text Pixels"
 JoypadTestInstructions: dbs "Rst:A+B+Start+Select"
 SgbStepTitle:   dbs "Select Command Type"
 InitialiseSGB:  dbs "Initialisation"

@@ -22,6 +22,7 @@ LIGHTEST    RB 1
 LIGHT       RB 1
 DARK        RB 1
 DARKEST     RB 1
+GRID        RB 1
 
 CURSOR EQU DARKEST ; Will have a proper image at some point.
 
@@ -33,12 +34,13 @@ MAIN_MENU_STATE     RB 1
 JOYPAD_TEST_STATE   RB 1
 SGB_TEST_STATE      RB 1
 AUDIO_TEST_STATE    RB 1
+PIXEL_TEST_STATE    RB 1
 MLT_REQ_STATE       RB 1
 PALPQ_STATE         RB 1
 MASK_EN_STATE       RB 1
 MASKED_EN_STATE     RB 1
 PALPQ_COLOUR_STATE  RB 1
-PALPQ_NIBBLE_STATE    RB 1
+PALPQ_NIBBLE_STATE  RB 1
 MAX_STATE           RB 0
 
 MAX_MENU_DEPTH EQU 6
@@ -51,6 +53,5 @@ MENU_MARGIN_TOP EQU 16
 ; Software Addresses 
 stackFloor EQU $ffff ; Might change to DFFF when actually start using the stack
 runDma EQU $ff80
-
 
     ENDC
